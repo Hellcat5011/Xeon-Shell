@@ -37,13 +37,19 @@ else
   exit 1
 fi
 
-# Create a downscaled JPEG preview for the app launcher.
-# The launcher only shows this at ~576 px wide, so 1080 px is more than enough.
-# This avoids decoding a huge upscaled PNG every time the launcher opens.
+# Detect primary monitor width for resolution-adaptive sizing
+SCREEN_W=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].width // empty' 2>/dev/null)
+SCREEN_W="${SCREEN_W:-1920}"
+THUMB_W=$((SCREEN_W * 50 / 100))
+
 if command -v magick >/dev/null 2>&1; then
-  magick "$WALLPAPER" -resize 1080x -quality 90 "$HOME/.wa.jpg"
+  # Lockscreen wallpaper at monitor resolution (only downscale, never upscale)
+  magick "$WALLPAPER" -resize "${SCREEN_W}x>" -quality 95 "$HOME/.wa.jpg"
+  # App launcher thumbnail
+  magick "$WALLPAPER" -resize "${THUMB_W}x>" -quality 90 "$HOME/.wa-thumb.jpg"
 else
   cp "$WALLPAPER" "$HOME/.wa.jpg"
+  cp "$WALLPAPER" "$HOME/.wa-thumb.jpg"
 fi
 
 if command -v matugen >/dev/null 2>&1; then

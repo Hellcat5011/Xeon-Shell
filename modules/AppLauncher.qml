@@ -23,7 +23,7 @@ OverlayWindow {
     panelHeight: 620
     cardRadius:  0 // Remove all rounding for the launcher
 
-    property string currentWallpaperPath: "file://" + Quickshell.env("HOME") + "/.wa.jpg"
+    property string currentWallpaperPath: "file://" + Quickshell.env("HOME") + "/.wa-thumb.jpg"
 
     // When false, mouse input is ignored (cursor hidden, hover-selection disabled).
     // Becomes true on first real mouse movement or click after the launcher opens.
@@ -39,7 +39,7 @@ OverlayWindow {
         if (shown) {
             queryField.text = ""
             // Append timestamp to bypass image cache when wallpaper changes
-            launcher.currentWallpaperPath = "file://" + Quickshell.env("HOME") + "/.wa.jpg?t=" + Date.now()
+            launcher.currentWallpaperPath = "file://" + Quickshell.env("HOME") + "/.wa-thumb.jpg?t=" + Date.now()
             refreshApps()
             // Make sure the launcher always starts at the top of the list when opened
             launcher.selectedIndex = 0

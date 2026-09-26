@@ -42,34 +42,39 @@ OverlayWindow {
 
     onShownChanged: {
         if (shown) {
-            var arr = picker._originalWallpapers.slice()
-            for (var i = arr.length - 1; i > 0; i--) {
-                var j = Math.floor(Math.random() * (i + 1))
-                var temp = arr[i]
-                arr[i] = arr[j]
-                arr[j] = temp
-            }
-            
-            // Ensure at least 9 items for seamless PathView wrap around the screen
-            var duplicatedArr = []
-            while (duplicatedArr.length < 9 && arr.length > 0) {
-                duplicatedArr = duplicatedArr.concat(arr)
-            }
-            picker.wallpapers = duplicatedArr
-            picker.currentIndex = 0
-            carousel.forceActiveFocus()
+            shuffleAndDisplay()
+            if (!scanProcess.running)
+                scanProcess.running = true
         }
+    }
+
+    onWallpaperDirChanged: {
+        picker._originalWallpapers = []
+        picker.wallpapers = []
+        if (!scanProcess.running)
+            scanProcess.running = true
+    }
+
+    function shuffleAndDisplay() {
+        var arr = picker._originalWallpapers.slice()
+        for (var i = arr.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1))
+            var temp = arr[i]
+            arr[i] = arr[j]
+            arr[j] = temp
+        }
+        var duplicatedArr = []
+        while (duplicatedArr.length < 9 && arr.length > 0) {
+            duplicatedArr = duplicatedArr.concat(arr)
+        }
+        picker.wallpapers = duplicatedArr
+        picker.currentIndex = 0
+        if (picker.shown) carousel.forceActiveFocus()
     }
 
     Process {
         id: scanProcess
-        command: [
-            "bash", "-c",
-            "find '" + picker.wallpaperDir + "' -maxdepth 1 -type f " +
-            "\\( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' " +
-            "-o -iname '*.gif' -o -iname '*.bmp' -o -iname '*.svg' -o -iname '*.avif' " +
-            "-o -iname '*.heic' -o -iname '*.heif' -o -iname '*.jxl' -o -iname '*.tiff' \\)"
-        ]
+        command: ["bash", Quickshell.shellDir + "/scripts/gen-wallpaper-thumbs.sh", picker.wallpaperDir]
         property var _buffer: []
 
         onRunningChanged: {
@@ -77,13 +82,18 @@ OverlayWindow {
                 _buffer = []
             } else {
                 picker._originalWallpapers = _buffer
+                if (picker.shown && picker.wallpapers.length === 0)
+                    picker.shuffleAndDisplay()
             }
         }
 
         stdout: SplitParser {
             onRead: data => {
-                if (data.trim().length > 0)
-                    scanProcess._buffer.push(data.trim())
+                let parts = data.trim().split("|")
+                if (parts.length >= 2)
+                    scanProcess._buffer.push({original: parts[0], thumb: parts[1]})
+                else if (parts[0] && parts[0].length > 0)
+                    scanProcess._buffer.push({original: parts[0], thumb: parts[0]})
             }
         }
     }
@@ -116,11 +126,11 @@ OverlayWindow {
         Keys.onEscapePressed: picker.hide()
         Keys.onReturnPressed: {
             if (!picker.applying && picker.wallpapers.length > 0)
-                picker.applyWallpaper(picker.wallpapers[picker.currentIndex])
+                picker.applyWallpaper(picker.wallpapers[picker.currentIndex].original)
         }
         Keys.onEnterPressed: {
             if (!picker.applying && picker.wallpapers.length > 0)
-                picker.applyWallpaper(picker.wallpapers[picker.currentIndex])
+                picker.applyWallpaper(picker.wallpapers[picker.currentIndex].original)
         }
 
         WheelHandler {
@@ -215,8 +225,8 @@ OverlayWindow {
                     y: 0
                     antialiasing: true
 
-                    source: "file://" + modelData
-                    sourceSize.width: 1920
+                    source: "file://" + modelData.thumb
+                    sourceSize.width: carousel.width * 0.35
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     
@@ -259,7 +269,7 @@ OverlayWindow {
                     enabled: !picker.applying
                     onClicked: {
                         if (isCurrent) {
-                            picker.applyWallpaper(modelData)
+                            picker.applyWallpaper(modelData.original)
                         } else {
                             carousel.currentIndex = index
                         }
