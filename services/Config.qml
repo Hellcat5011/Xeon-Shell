@@ -44,6 +44,7 @@ Item {
     property alias blueLightTransitionMinutes: settings.blueLightTransitionMinutes
     property alias blueLightDayTemp: settings.blueLightDayTemp
     property alias blueLightNightTemp: settings.blueLightNightTemp
+    property alias desktopLayout: settings.desktopLayout
 
     // Draft values — the Settings UI edits these. They do not affect the
     // shell's live behavior until save() is called.
@@ -170,5 +171,6 @@ Item {
         property int blueLightTransitionMinutes: 30
         property int blueLightDayTemp: 6500
         property int blueLightNightTemp: 4500
+        property string desktopLayout: ""
     }
 }

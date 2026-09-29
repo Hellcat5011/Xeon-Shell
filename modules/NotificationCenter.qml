@@ -19,6 +19,8 @@ OverlayWindow {
     cardColor: Qt.rgba(Theme.inversePrimary.r, Theme.inversePrimary.g, Theme.inversePrimary.b, 0.65)
     hasBorder: true
 
+    signal openSettings()
+
     // Wayland margins
     margins.top: 10
     margins.bottom: 10
@@ -60,6 +62,70 @@ OverlayWindow {
         anchors.fill: parent
         anchors.margins: 20
         spacing: 20
+
+        // --- Header: Control Centre & Settings ---
+        RowLayout {
+            Layout.fillWidth: true
+
+            Text {
+                text: "Control Centre"
+                color: Theme.onPrimaryContainerColor
+                font.pixelSize: 18
+                font.bold: true
+                Layout.fillWidth: true
+            }
+
+            Rectangle {
+                id: gearBtn
+                width: 32
+                height: 32
+                radius: 16
+                border.width: 1
+                border.color: Theme.onPrimaryContainerColor
+                color: gearMouse.containsMouse ? Theme.onPrimaryContainerColor : "transparent"
+
+                Shape {
+                    anchors.centerIn: parent
+                    width: 24
+                    height: 24
+                    scale: 18 / 24
+                    layer.enabled: true
+                    layer.samples: 4
+
+                    ShapePath {
+                        strokeColor: gearMouse.containsMouse ? Theme.inversePrimary : Theme.onPrimaryContainerColor
+                        strokeWidth: 2
+                        fillColor: "transparent"
+                        joinStyle: ShapePath.RoundJoin
+                        capStyle: ShapePath.RoundCap
+                        PathSvg {
+                            path: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+                        }
+                    }
+                    ShapePath {
+                        strokeColor: gearMouse.containsMouse ? Theme.inversePrimary : Theme.onPrimaryContainerColor
+                        strokeWidth: 2
+                        fillColor: "transparent"
+                        joinStyle: ShapePath.RoundJoin
+                        capStyle: ShapePath.RoundCap
+                        PathSvg {
+                            path: "M 12 9 A 3 3 0 0 1 12 15 A 3 3 0 0 1 12 9"
+                        }
+                    }
+                }
+
+                MouseArea {
+                    id: gearMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        nc.hide();
+                        nc.openSettings();
+                    }
+                }
+            }
+        }
 
         // --- Header: Bluetooth & Caffeinate ---
         RowLayout {

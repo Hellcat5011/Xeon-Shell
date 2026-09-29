@@ -28,6 +28,9 @@ PanelWindow {
     // ---- Public API -------------------------------------------------------
     property bool shown: false
 
+    // Emitted by the gear button; shell.qml opens Settings on the Screenshot tab
+    signal openSettingsRequested()
+
     function show()   { root.shown = true }
     function hide()   {
         root.shown = false
@@ -230,11 +233,6 @@ PanelWindow {
         id: notifyProcess
     }
 
-    Process {
-        id: settingsLauncher
-        command: ["qs", "-c", "xeon-shell", "ipc", "call", "screenshot", "settings"]
-    }
-
     // ---- ScreencopyView (frozen backdrop) ---------------------------------
     ScreencopyView {
         id: screenView
@@ -345,9 +343,8 @@ PanelWindow {
         id: interactionArea
         anchors.fill: parent
         enabled: root.shown
-        // Leave room for top/bottom bars
-        anchors.topMargin: 60
-        anchors.bottomMargin: 80
+        // Covers the whole screen (including the very top/bottom edges).
+        // The top/bottom bars sit above this and swallow their own clicks.
         hoverEnabled: root.selectionType === "window"
         cursorShape: root.selectionType === "region" ? Qt.CrossCursor : Qt.ArrowCursor
 
@@ -355,8 +352,8 @@ PanelWindow {
             if (root.selectionType === "region") {
                 root.isSelecting = true
                 root.hasSelection = false
-                root.selStartX = mouse.x + interactionArea.anchors.topMargin * 0
-                root.selStartY = mouse.y + 60 // account for top margin
+                root.selStartX = Math.max(0, Math.min(root.width, mouse.x))
+                root.selStartY = Math.max(0, Math.min(root.height, mouse.y))
                 root.selEndX = root.selStartX
                 root.selEndY = root.selStartY
             }
@@ -364,12 +361,12 @@ PanelWindow {
 
         onPositionChanged: (mouse) => {
             if (root.selectionType === "region" && root.isSelecting) {
-                root.selEndX = mouse.x
-                root.selEndY = mouse.y + 60
+                root.selEndX = Math.max(0, Math.min(root.width, mouse.x))
+                root.selEndY = Math.max(0, Math.min(root.height, mouse.y))
             } else if (root.selectionType === "window") {
                 // Find which window the cursor is over
                 var mx = mouse.x
-                var my = mouse.y + 60
+                var my = mouse.y
                 root.hoveredWindow = -1
                 root.hoveredGeom = null
                 for (var i = 0; i < root.windowList.length; i++) {
@@ -386,8 +383,8 @@ PanelWindow {
         onReleased: (mouse) => {
             if (root.selectionType === "region" && root.isSelecting) {
                 root.isSelecting = false
-                root.selEndX = mouse.x
-                root.selEndY = mouse.y + 60
+                root.selEndX = Math.max(0, Math.min(root.width, mouse.x))
+                root.selEndY = Math.max(0, Math.min(root.height, mouse.y))
                 if (root.selW > 10 && root.selH > 10) {
                     root.hasSelection = true
                 }
@@ -776,6 +773,9 @@ PanelWindow {
             Behavior on y { NumberAnimation { duration: Theme.animMed + 50; easing.type: Easing.OutBack; easing.overshoot: 2.0 } }
         }
 
+        // Swallow clicks/hover so they don't start a selection underneath the pill
+        MouseArea { anchors.fill: parent; hoverEnabled: true; onClicked: (mouse) => mouse.accepted = true }
+
         RowLayout {
             id: modeRow
             anchors.centerIn: parent
@@ -862,7 +862,7 @@ PanelWindow {
         }
 
         // Swallow clicks so they don't dismiss
-        MouseArea { anchors.fill: parent; onClicked: (mouse) => mouse.accepted = true }
+        MouseArea { anchors.fill: parent; hoverEnabled: true; onClicked: (mouse) => mouse.accepted = true }
 
         ColumnLayout {
             id: bottomCol
@@ -1063,7 +1063,7 @@ PanelWindow {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             root.hide()
-                            settingsLauncher.running = true
+                            root.openSettingsRequested()
                         }
                     }
                 }
@@ -1084,5 +1084,5 @@ PanelWindow {
             }
         }
     }
-    // ---- (Folder picker logic moved to ScreenshotSettings.qml) ------------
+    // ---- (Folder picker logic lives in the Screenshot tab of SettingsWindow.qml) ------------
 }

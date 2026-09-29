@@ -12,6 +12,115 @@ OverlayWindow {
     cardRadius: Theme.radiusLarge
     hasBorder: true
 
+    property bool editModeActive: false
+    signal requestEditMode()
+
+    // ── Screenshot settings ──
+    // These are stored by scripts/screenshot-config.sh (not in Config), so the
+    // tab keeps its own saved/draft copies and joins the normal Save / unsaved-
+    // changes flow.
+    property string ssDir: ""
+    property string recDir: ""
+    property string draftSsDir: ""
+    property string draftRecDir: ""
+    readonly property bool screenshotDirty: draftSsDir !== ssDir || draftRecDir !== recDir
+    readonly property bool hasUnsavedChanges: Config.isDirty || screenshotDirty
+
+    function show() {
+        if (editModeActive) return;
+        root.shown = true;
+    }
+
+    function toggle() {
+        if (editModeActive) return;
+        root.shown = !root.shown;
+    }
+
+    // Open the window (if needed) and jump straight to a tab.
+    function openTab(index) {
+        if (editModeActive) return;
+        if (!root.shown) root.shown = true;   // onShownChanged resets state first
+        tabList.currentIndex = index;
+    }
+
+    function showScreenshotTab() { openTab(5) }
+
+    function loadScreenshotConfig() { screenshotConfigReader.running = true }
+
+    function discardScreenshotDraft() {
+        draftSsDir = ssDir;
+        draftRecDir = recDir;
+    }
+
+    function saveScreenshotConfig() {
+        if (!screenshotDirty) return;
+        // Mark as saved immediately so the dirty check (and the popup Save flow) settles at once
+        ssDir = draftSsDir;
+        recDir = draftRecDir;
+        screenshotConfigWriter.command = [
+            "sh", "-c",
+            'sh "$1" write screenshotDir "$2" && sh "$1" write recordingDir "$3"',
+            "_", Quickshell.shellDir + "/scripts/screenshot-config.sh", ssDir, recDir
+        ];
+        screenshotConfigWriter.running = true;
+    }
+
+    Process {
+        id: screenshotConfigReader
+        command: ["sh", Quickshell.shellDir + "/scripts/screenshot-config.sh", "read"]
+        property string jsonContent: ""
+
+        onRunningChanged: {
+            if (running) {
+                jsonContent = "";
+            } else if (jsonContent.trim().length > 0) {
+                try {
+                    let c = JSON.parse(jsonContent);
+                    root.ssDir = c.screenshotDir || "";
+                    root.recDir = c.recordingDir || "";
+                    root.draftSsDir = root.ssDir;
+                    root.draftRecDir = root.recDir;
+                } catch (e) {
+                    console.warn("SettingsWindow: could not parse screenshot config -", e);
+                }
+            }
+        }
+        stdout: SplitParser { onRead: data => { screenshotConfigReader.jsonContent += data + "\n" } }
+    }
+
+    Process {
+        id: screenshotConfigWriter
+        onExited: (code) => {
+            if (code !== 0) {
+                applyProc.success = false;
+                applyProc.resultMessage = "Could not save screenshot settings.";
+                messageTimer.restart();
+            }
+        }
+    }
+
+    Process {
+        id: ssPickerProcess
+        property string selectedPath: ""
+        onRunningChanged: { if (running) selectedPath = "" }
+        onExited: (exitCode) => {
+            if (exitCode === 0 && selectedPath.trim().length > 0)
+                root.draftSsDir = selectedPath.trim();
+        }
+        stdout: SplitParser { onRead: data => { ssPickerProcess.selectedPath += data } }
+    }
+
+    Process {
+        id: recPickerProcess
+        property string selectedPath: ""
+        onRunningChanged: { if (running) selectedPath = "" }
+        onExited: (exitCode) => {
+            if (exitCode === 0 && selectedPath.trim().length > 0)
+                root.draftRecDir = selectedPath.trim();
+        }
+        stdout: SplitParser { onRead: data => { recPickerProcess.selectedPath += data } }
+    }
+
     function fuzzyMatch(pattern, str) {
         pattern = pattern.toLowerCase().trim();
         str = str.toLowerCase();
@@ -30,12 +139,15 @@ OverlayWindow {
         "Wallpaper Wallpaper Directory The absolute path to the directory containing your wallpaper images. Wallpaper Daemon The backend service used to set and render your desktop wallpapers.",
         "Lock Screen Lockscreen Power Menu Allow session control actions (Suspend, Reboot, Shutdown) directly from the lockscreen. Lockscreen Alignment Position the lockscreen elements aligned to the left or right edge of the screen.",
         "Greeter Remember Last User Save the last logged-in user and session to automatically pre-select them on the next boot.",
-        "Display Manage idle behavior Automatically lock the screen when the system is idle. Lock timeout Time in minutes before the screen is locked. Blue Light Filter Toggle the blue light filter (night light). Turn on now Manually force the blue light filter on. Mode Fixed Time, Sunset/Sunrise Night Schedule Night starts Night ends The filter is active between these times Coordinates Use realtime location based on IP Transition Duration Time in minutes for the color temperature to transition. Day Temperature Color temperature during the day (K). Night Temperature Color temperature at night (K)."
+        "Display Manage idle behavior Automatically lock the screen when the system is idle. Lock timeout Time in minutes before the screen is locked. Blue Light Filter Toggle the blue light filter (night light). Turn on now Manually force the blue light filter on. Mode Fixed Time, Sunset/Sunrise Night Schedule Night starts Night ends The filter is active between these times Coordinates Use realtime location based on IP Transition Duration Time in minutes for the color temperature to transition. Day Temperature Color temperature during the day (K). Night Temperature Color temperature at night (K).",
+        "Desktop Desktop Edit Mode Reposition, resize, remove and re-add desktop widgets.",
+        "Screenshot Screenshot Directory The folder where screenshots are saved. Recording Directory The folder where screen recordings are saved."
     ]
 
     function commitChanges(isFromPopup) {
         let needsGreeterSync = (Config.draftLockscreenAlignment !== Config.lockscreenAlignment) || (Config.draftRememberLastUser !== Config.rememberLastUser);
         Config.save();
+        root.saveScreenshotConfig();
         
         if (needsGreeterSync) {
             applyProc.isPopup = isFromPopup;
@@ -54,7 +166,7 @@ OverlayWindow {
     }
 
     function requestClose() {
-        if (Config.isDirty) {
+        if (root.hasUnsavedChanges) {
             unsavedPopup.visible = true
         } else {
             root.hide()
@@ -62,7 +174,7 @@ OverlayWindow {
     }
 
     onVisibleChanged: {
-        if (!visible && Config.isDirty) {
+        if (!visible && root.hasUnsavedChanges) {
             visible = true
             requestClose()
         }
@@ -70,7 +182,13 @@ OverlayWindow {
 
     onShownChanged: {
         if (shown) {
+            if (editModeActive) {
+                shown = false
+                return
+            }
             Config.discard()
+            root.discardScreenshotDraft()
+            root.loadScreenshotConfig()
             keyHandler.forceActiveFocus()
             if (searchField) searchField.text = ""
         }
@@ -165,7 +283,7 @@ OverlayWindow {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
-                    model: ["Wallpaper", "Lock Screen", "Greeter", "Display"]
+                    model: ["Wallpaper", "Lock Screen", "Greeter", "Display", "Desktop", "Screenshot"]
                     currentIndex: 0
                     
                     delegate: Item {
@@ -236,7 +354,7 @@ OverlayWindow {
                         Layout.fillWidth: true
                         
                         Text {
-                            text: tabList.currentIndex === 0 ? "⚙  Wallpaper Settings" : (tabList.currentIndex === 1 ? "⚙  Lock Screen Settings" : (tabList.currentIndex === 2 ? "⚙  Greeter Settings" : "⚙  Display Settings"))
+                            text: "⚙  " + ["Wallpaper Settings", "Lock Screen Settings", "Greeter Settings", "Display Settings", "Desktop Settings", "Screenshot Settings"][tabList.currentIndex]
                             color: Theme.onPrimaryContainerColor
                             font.pixelSize: 20
                             font.weight: Font.DemiBold
@@ -904,6 +1022,192 @@ OverlayWindow {
                         }
                         
                             }
+
+                            // ── PAGE 4: Desktop ──
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 24
+                                visible: tabList.currentIndex === 4
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 16
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 4
+
+                                        Text {
+                                            text: "Desktop Edit Mode"
+                                            color: Theme.onPrimaryContainerColor
+                                            font.pixelSize: 15
+                                            font.weight: Font.Medium
+                                        }
+
+                                        Text {
+                                            text: "Reposition, resize, remove, and re-add desktop widgets."
+                                            color: Theme.onPrimaryContainerColor
+                                            opacity: 0.6
+                                            font.pixelSize: 12
+                                            wrapMode: Text.WordWrap
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+
+                                    Button {
+                                        id: enterEditModeBtn
+                                        text: "Enter desktop edit mode"
+                                        onClicked: {
+                                            root.hide();
+                                            root.requestEditMode();
+                                        }
+
+                                        contentItem: Text {
+                                            text: parent.text
+                                            color: Theme.onPrimaryContainerColor
+                                            font.pixelSize: 13
+                                            font.weight: Font.Medium
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+
+                                        background: Rectangle {
+                                            implicitHeight: 36
+                                            implicitWidth: 190
+                                            color: Theme.primary
+                                            opacity: enterEditModeBtn.down ? 0.3 : (enterEditModeBtn.hovered ? 0.4 : 0.2)
+                                            radius: 18
+                                            border.width: 1
+                                            border.color: Theme.primary
+                                            layer.enabled: true
+                                            Behavior on opacity { NumberAnimation { duration: 150 } }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // ── PAGE 5: Screenshot ──
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 24
+                                visible: tabList.currentIndex === 5
+
+                                // Setting: Screenshot Directory
+                                RowLayout {
+                                    visible: root.fuzzyMatch(searchField.text, "Screenshot Directory The folder where screenshots are saved.")
+                                    Layout.fillWidth: true
+                                    spacing: 12
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 4
+                                        Text { text: "Screenshot Directory"; color: Theme.onPrimaryContainerColor; font.pixelSize: 15; font.weight: Font.Medium }
+                                        Text { text: "The folder where screenshots are saved."; color: Theme.onPrimaryContainerColor; opacity: 0.6; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                                    }
+
+                                    TextField {
+                                        id: ssDirField
+                                        Layout.preferredWidth: 220
+                                        Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                        text: root.draftSsDir
+                                        color: Theme.onPrimaryContainerColor
+                                        font.pixelSize: 14
+                                        leftPadding: 12; rightPadding: 12; topPadding: 8; bottomPadding: 8
+                                        selectByMouse: true
+                                        background: Rectangle {
+                                            color: Theme.primary; opacity: 0.1; radius: 20
+                                            border.width: 1; border.color: parent.activeFocus ? Theme.primary : Theme.outlineVariant
+                                        }
+                                        onTextEdited: root.draftSsDir = text
+                                        onEditingFinished: root.draftSsDir = text
+                                    }
+
+                                    Button {
+                                        id: ssDirFieldBrowse
+                                        enabled: !ssPickerProcess.running
+                                        Layout.alignment: Qt.AlignVCenter
+                                        onClicked: {
+                                            ssPickerProcess.command = ["zenity", "--file-selection", "--directory", "--title=Select Screenshot Folder", "--filename=" + root.draftSsDir + "/"];
+                                            ssPickerProcess.running = true;
+                                        }
+                                        contentItem: Text {
+                                            text: "📁"
+                                            font.pixelSize: 16
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+                                        background: Rectangle {
+                                            implicitWidth: 36
+                                            implicitHeight: 36
+                                            radius: 18
+                                            color: Theme.primary
+                                            opacity: ssDirFieldBrowse.down ? 0.3 : (ssDirFieldBrowse.hovered ? 0.4 : 0.2)
+                                            border.width: 1
+                                            border.color: Theme.primary
+                                            layer.enabled: true
+                                            Behavior on opacity { NumberAnimation { duration: 150 } }
+                                        }
+                                    }
+                                }
+
+                                // Setting: Recording Directory
+                                RowLayout {
+                                    visible: root.fuzzyMatch(searchField.text, "Recording Directory The folder where screen recordings are saved.")
+                                    Layout.fillWidth: true
+                                    spacing: 12
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 4
+                                        Text { text: "Recording Directory"; color: Theme.onPrimaryContainerColor; font.pixelSize: 15; font.weight: Font.Medium }
+                                        Text { text: "The folder where screen recordings are saved."; color: Theme.onPrimaryContainerColor; opacity: 0.6; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                                    }
+
+                                    TextField {
+                                        id: recDirField
+                                        Layout.preferredWidth: 220
+                                        Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                        text: root.draftRecDir
+                                        color: Theme.onPrimaryContainerColor
+                                        font.pixelSize: 14
+                                        leftPadding: 12; rightPadding: 12; topPadding: 8; bottomPadding: 8
+                                        selectByMouse: true
+                                        background: Rectangle {
+                                            color: Theme.primary; opacity: 0.1; radius: 20
+                                            border.width: 1; border.color: parent.activeFocus ? Theme.primary : Theme.outlineVariant
+                                        }
+                                        onTextEdited: root.draftRecDir = text
+                                        onEditingFinished: root.draftRecDir = text
+                                    }
+
+                                    Button {
+                                        id: recDirFieldBrowse
+                                        enabled: !recPickerProcess.running
+                                        Layout.alignment: Qt.AlignVCenter
+                                        onClicked: {
+                                            recPickerProcess.command = ["zenity", "--file-selection", "--directory", "--title=Select Recording Folder", "--filename=" + root.draftRecDir + "/"];
+                                            recPickerProcess.running = true;
+                                        }
+                                        contentItem: Text {
+                                            text: "📁"
+                                            font.pixelSize: 16
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+                                        background: Rectangle {
+                                            implicitWidth: 36
+                                            implicitHeight: 36
+                                            radius: 18
+                                            color: Theme.primary
+                                            opacity: recDirFieldBrowse.down ? 0.3 : (recDirFieldBrowse.hovered ? 0.4 : 0.2)
+                                            border.width: 1
+                                            border.color: Theme.primary
+                                            layer.enabled: true
+                                            Behavior on opacity { NumberAnimation { duration: 150 } }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     
@@ -1112,6 +1416,7 @@ OverlayWindow {
                         text: "Discard"
                         onClicked: {
                             Config.discard()
+                            root.discardScreenshotDraft()
                             unsavedPopup.visible = false
                             root.hide()
                         }

@@ -45,6 +45,7 @@ ShellRoot {
 
     Modules.NotificationCenter {
         id: notificationCenter
+        onOpenSettings: settingsWindow.show()
     }
 
     Modules.NotificationPopup {
@@ -65,10 +66,7 @@ ShellRoot {
 
     Modules.ScreenCapture {
         id: screenCapture
-    }
-
-    Modules.ScreenshotSettings {
-        id: screenshotSettings
+        onOpenSettingsRequested: settingsWindow.showScreenshotTab()
     }
 
     Modules.DesktopMpris {
@@ -77,11 +75,19 @@ ShellRoot {
 
     Modules.DesktopTray {
         id: desktopTray
-        onToggleSettings: settingsWindow.toggle()
     }
 
     Modules.SettingsWindow {
         id: settingsWindow
+        editModeActive: desktopEditMode.active
+        onRequestEditMode: desktopEditMode.startEditMode()
+    }
+
+    Modules.DesktopEditMode {
+        id: desktopEditMode
+        onClosed: (saved) => {
+            settingsWindow.show()
+        }
     }
 
     Modules.DesktopClock {
@@ -154,10 +160,22 @@ ShellRoot {
         }
     }
 
+    PanelWindow {
+        id: idleInhibitWindow
+        WlrLayershell.layer: WlrLayer.Background
+        WlrLayershell.namespace: "idle-inhibitor"
+        exclusiveZone: -1
+        color: "transparent"
+        visible: true
+        implicitWidth: 1
+        implicitHeight: 1
+        mask: Region {}
+    }
+
     IdleInhibitor {
         id: idleInhibitor
         enabled: SystemMonitor.caffeinateEnabled
-        window: desktopTray
+        window: idleInhibitWindow
     }
 
     // IPC handlers: these let you (or a Hyprland keybind) control the
@@ -221,6 +239,7 @@ ShellRoot {
         function region(): void { screenCapture.captureRegion() }
         function window(): void { screenCapture.captureWindow() }
         function output(): void { screenCapture.captureOutput() }
+        function settings(): void { settingsWindow.showScreenshotTab() }
     }
 
     IpcHandler {
@@ -228,6 +247,23 @@ ShellRoot {
         function toggle(): void { settingsWindow.toggle() }
         function open(): void { settingsWindow.show() }
         function close(): void { settingsWindow.hide() }
+    }
+
+    IpcHandler {
+        target: "desktopedit"
+        function toggle(): void { desktopEditMode.toggle() }
+        function open(): void { desktopEditMode.show() }
+        function close(): void { desktopEditMode.hide() }
+        function save(): void { desktopEditMode.saveAndClose() }
+        function discard(): void { desktopEditMode.discardAndClose() }
+        function status(): string {
+            return JSON.stringify({
+                active: desktopEditMode.active,
+                workingLayout: desktopEditMode.workingLayout,
+                storedLayout: Config.desktopLayout
+            })
+        }
+        function reset(): void { Config.desktopLayout = "" }
     }
 
     IpcHandler {
@@ -363,11 +399,17 @@ Available Targets and Methods:
     region()    - Capture a screen region
     window()    - Capture a specific window
     output()    - Capture a specific output/screen
+    settings()  - Open Settings on the Screenshot tab
 
   settings
     toggle()  - Toggle the settings window
     open()    - Open the settings window
     close()   - Close the settings window
+
+  desktopedit
+    toggle()  - Toggle desktop edit mode
+    open()    - Open desktop edit mode
+    close()   - Close desktop edit mode
 
   keybinds
     toggle()  - Toggle the keybind viewer

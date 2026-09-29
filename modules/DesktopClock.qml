@@ -1,65 +1,35 @@
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import "../services"
 
 PanelWindow {
     id: root
-
-    anchors {
-        bottom: true
-        right: true
-    }
-
-    margins {
-        bottom: 380
-        right: 30
-    }
+    screen: DesktopLayout.primaryScreen
 
     exclusiveZone: -1
     WlrLayershell.layer: WlrLayer.Bottom
     WlrLayershell.namespace: "desktop"
-
-    implicitWidth: 360
-    implicitHeight: content.implicitHeight + 40
     color: "transparent"
 
-    property var currentDate: new Date()
-    Timer {
-        interval: 30000
-        running: true
-        repeat: true
-        onTriggered: root.currentDate = new Date()
+    readonly property var geom: DesktopLayout.getWidgetGeometry("clock", DesktopLayout.screenWidth, DesktopLayout.screenHeight, 360, 180)
+
+    anchors {
+        top: true
+        left: true
     }
 
-    DesktopWidgetBackground {}
+    margins {
+        top: Math.round(root.geom.y)
+        left: Math.round(root.geom.x)
+    }
 
-    ColumnLayout {
-        id: content
-        anchors.centerIn: parent
-        anchors.margins: 20
-        spacing: 5
+    implicitWidth: Math.round(root.geom.w)
+    implicitHeight: Math.round(root.geom.h)
+    visible: root.geom.visible
 
-        Text {
-            Layout.alignment: Qt.AlignHCenter
-            text: {
-                let h = root.currentDate.getHours() % 12 || 12;
-                let m = root.currentDate.getMinutes().toString().padStart(2, '0');
-                return h + ":" + m;
-            }
-            color: Theme.onPrimaryContainerColor
-            font.family: "CaskaydiaCove Nerd Font Mono"
-            font.bold: true
-            font.pixelSize: 84
-        }
-
-        Text {
-            Layout.alignment: Qt.AlignHCenter
-            text: Qt.formatDate(root.currentDate, "dddd, MMMM dd")
-            color: Theme.onPrimaryContainerColor
-            font.family: "CaskaydiaCove Nerd Font Mono"
-            font.pixelSize: 18
-        }
+    DesktopClockContent {
+        anchors.fill: parent
+        interactive: true
     }
 }
