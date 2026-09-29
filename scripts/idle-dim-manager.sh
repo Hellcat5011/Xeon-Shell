@@ -4,7 +4,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/brightness.sh"
 
-STATE_DIR="$SCRIPT_DIR/../scratch/idle-dim"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/xeon-shell/idle-dim"
 mkdir -p "$STATE_DIR"
 
 DIM_STATE="$STATE_DIR/dim_state.json"
@@ -15,6 +15,7 @@ LAPTOP_DIM=10
 EXT_DIM=10
 
 cache_displays() {
+    mkdir -p "$STATE_DIR"
     # Extract valid I2C bus numbers (e.g. 4 from /dev/i2c-4)
     ddcutil detect 2>/dev/null | grep "I2C bus:" | awk -F'-' '{print $2}' > "$BUS_CACHE"
 }

@@ -1,8 +1,8 @@
 #!/bin/bash
 # brightness.sh: Reusable functions for brightness control (laptop and external)
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BUS_CACHE="$SCRIPT_DIR/../scratch/idle-dim/buses.txt"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/xeon-shell/idle-dim"
+BUS_CACHE="$STATE_DIR/buses.txt"
 
 # Laptop panel control
 get_laptop() {

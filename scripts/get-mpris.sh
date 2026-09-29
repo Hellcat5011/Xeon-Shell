@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Use /tmp to cache last player and thumbnails
-LAST_PLAYER_FILE="/tmp/quickshell_last_player"
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}"
+LAST_PLAYER_FILE="$RUNTIME_DIR/quickshell_last_player_${UID:-$(id -u)}"
 
 update() {
     player=""
@@ -47,7 +47,7 @@ update() {
         mime=$(file -b --mime-type "$local_path" 2>/dev/null)
         if [[ "$mime" == video/* ]]; then
             hash=$(echo -n "$local_path" | md5sum | cut -d' ' -f1)
-            thumb_path="/tmp/mpris_thumb_${hash}.jpg"
+            thumb_path="$RUNTIME_DIR/mpris_thumb_${UID:-$(id -u)}_${hash}.jpg"
             if [ ! -f "$thumb_path" ]; then
                 ffmpeg -y -i "$local_path" -ss 00:00:01.000 -vframes 1 "$thumb_path" 2>/dev/null
             fi
@@ -78,7 +78,7 @@ update() {
 # ---------------------------------------------------------------------------
 
 PARENT_PID=$PPID
-FIFO=$(mktemp -u /tmp/quickshell_mpris_fifo.XXXXXX)
+FIFO=$(mktemp -u "$RUNTIME_DIR/quickshell_mpris_fifo_${UID:-$(id -u)}.XXXXXX")
 mkfifo "$FIFO"
 pids=()
 

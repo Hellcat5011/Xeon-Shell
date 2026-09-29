@@ -39,7 +39,7 @@ OverlayWindow {
         
         if (needsGreeterSync) {
             applyProc.isPopup = isFromPopup;
-            applyProc.command = ["bash", "-c", "python3 ~/.config/quickshell/xeon-shell/scripts/write-greeter-snapshot.py --alignment " + Config.lockscreenAlignment + " --remember " + (Config.rememberLastUser ? "true" : "false")]
+            applyProc.command = ["python3", Quickshell.shellDir + "/scripts/write-greeter-snapshot.py", "--alignment", Config.lockscreenAlignment, "--remember", (Config.rememberLastUser ? "true" : "false")]
             applyProc.running = true;
         } else {
             if (isFromPopup) {

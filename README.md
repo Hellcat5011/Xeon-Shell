@@ -11,21 +11,38 @@ Xeon Shell provides a comprehensive set of built-in tools and menus to keep your
 
 - **App Launcher**: Quickly find and launch your applications.
 - **Wallpaper Selector**: Easily switch between your favorite backgrounds.
+- **Blue Light Filter**: Night light with auto sunrise/sunset geolocation calculation, custom scheduling, and smooth gamma transitions via Wayland protocol.
+- **Idle Dimming**: Intelligent pre-lock dimming for laptop panels and external monitors (DDC/CI).
+- **Desktop MPRIS & Audio**: Media controls, album artwork, track seekbar, and audio sink switcher.
 - **Power Menu**: Sleek system controls (shutdown, reboot, suspend, etc.).
 - **Notification Center**: Manage and view your system notifications.
 - **Clipboard Manager**: A full, lightweight clipboard manager written entirely in QML (no reliance on `cliphist`).
-- **Screenshot & Screen Record Utility**: Capture your screen effortlessly.
-- **Lockscreen**: Custom lockscreen interface featuring PAM authentication and wayland session locking.
+- **Screenshot & Screen Record Utility**: Capture and record your screen effortlessly.
+- **Lockscreen & Greeter**: Custom lockscreen and `greetd` login greeter interface featuring PAM authentication.
 
 ## 📦 Dependencies
 
 Ensure you have the following installed on your system before proceeding:
 
-- **[Quickshell](https://quickshell.outfoxxed.me/)**: The core QML shell environment powering Super Shell.
-- **[Hyprland](https://hyprland.org/)**: The Wayland compositor (the shell heavily relies on `hyprctl`).
-- **awww**: Used for setting wallpapers (can be swapped out for `hyprpaper` if preferred).
-- **magick (ImageMagick)**: Required for generating application launcher preview images.
+### Core Requirements
+- **[Quickshell](https://quickshell.outfoxxed.me/)**: The core QML shell environment (`qs`).
+- **[Hyprland](https://hyprland.org/)**: The Wayland compositor (heavily relies on `hyprctl`).
+- **jq**: JSON parsing in scripts.
+- **python3**: Required for geolocation and greeter helper bridge.
+- **wl-clipboard**: Required for the QML clipboard manager (`wl-paste`).
+
+### Theming & Multimedia
+- **awww** / **swww**: Wallpaper daemon (supports `hyprpaper` as well).
 - **matugen**: Used for Material You dynamic theme generation based on your wallpaper.
+- **magick (ImageMagick)**: Required for generating wallpapers, thumbnails, and preview images.
+- **playerctl**: Controls MPRIS media players and streams track metadata.
+- **pipewire-pulse** / **pulseaudio-utils**: Provides `pactl` for audio sink and volume control.
+- **ffmpeg**: Used for video thumbnail generation and screen recording encoding.
+
+### Hardware & Power
+- **brightnessctl**: Laptop screen brightness adjustments and idle dimming.
+- **ddcutil**: External monitor brightness control and idle dimming via DDC/CI.
+- **bluez-utils**: Provides `bluetoothctl` for Bluetooth status and battery reporting.
 - **systemd / logind**: Required for power menu actions via `loginctl` and `systemctl`.
 
 ## 🛠️ Installation

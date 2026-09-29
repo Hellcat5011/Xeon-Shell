@@ -7,14 +7,14 @@ STATE_DIR="${GREETER_STATE_DIR:-/var/lib/greetd/quickshell-greeter}"
 WALLPAPER="$HOME/.wa.jpg"
 
 if [ ! -d "$STATE_DIR" ] || [ ! -w "$STATE_DIR" ]; then
-    echo "ERROR: Target directory $STATE_DIR does not exist or is not writable." >&2
-    echo "Have you completed the one-time privileged setup (groupadd, usermod, chown, chmod 2775) and re-logged in?" >&2
-    exit 1
+    echo "NOTICE: Target directory $STATE_DIR does not exist or is not writable." >&2
+    echo "Greeter sync skipped. (Complete privileged setup and log in again to enable)." >&2
+    exit 0
 fi
 
 if [ ! -f "$WALLPAPER" ]; then
-    echo "ERROR: Wallpaper file $WALLPAPER not found!" >&2
-    exit 1
+    echo "NOTICE: Wallpaper file $WALLPAPER not found. Greeter will use default theme background." >&2
+    exit 0
 fi
 
 if ! cp "$WALLPAPER" "$STATE_DIR/wallpaper.jpg"; then

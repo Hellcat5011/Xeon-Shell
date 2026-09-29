@@ -14,9 +14,13 @@ def main():
     parser.add_argument("--remember", required=True, type=lambda x: x.lower() == "true")
     args = parser.parse_args()
 
-    if not os.path.isdir(STATE_DIR) or not os.access(STATE_DIR, os.W_OK):
-        print(f"ERROR: Cannot write to {STATE_DIR}. Are you in the greeter-sync group?", file=sys.stderr)
-        sys.exit(1)
+    if not os.path.isdir(STATE_DIR):
+        # Greeter is optional or not installed; return cleanly
+        sys.exit(0)
+
+    if not os.access(STATE_DIR, os.W_OK):
+        print(f"Notice: Greeter state {STATE_DIR} not writable. Re-login to activate greeter-sync group.", file=sys.stderr)
+        sys.exit(0)
 
     config = {
         "lockscreenAlignment": args.alignment,
