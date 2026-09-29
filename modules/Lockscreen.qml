@@ -15,7 +15,6 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Pam
-import Qt5Compat.GraphicalEffects
 import "../services"
 
 Scope {
@@ -49,6 +48,13 @@ Scope {
         interval: 1200
         running: root.unlocking
         onTriggered: sessionLock.locked = false
+    }
+
+    Timer {
+        id: fadeInSafety
+        interval: 800
+        running: sessionLock.locked && !root.unlocking && root.fade < 1
+        onTriggered: root.fade = 1
     }
 
     // ── Password mask state ──
