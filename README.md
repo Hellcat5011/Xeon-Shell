@@ -28,6 +28,7 @@ Ensure you have the following installed on your system before proceeding:
 - **[Quickshell](https://quickshell.outfoxxed.me/)**: The core QML shell environment (`qs`).
 - **[Hyprland](https://hyprland.org/)**: The Wayland compositor (heavily relies on `hyprctl`).
 - **greetd**: Display manager daemon (required for the built-in Quickshell login greeter).
+- **qt6-5compat**: Qt6 compatibility module for QML effects and legacy transitions.
 - **jq**: JSON parsing in scripts.
 - **python3**: Required for geolocation and greeter helper bridge.
 - **wl-clipboard**: Required for the QML clipboard manager (`wl-paste`).

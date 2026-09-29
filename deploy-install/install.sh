@@ -16,12 +16,18 @@ if [ ! -d "$REPO_DIR/deploy" ] || [ ! -f "$REPO_DIR/shell.qml" ]; then
     exit 1
 fi
 
-# 2. Dependency Diagnostics
+# 2. Dependency Diagnostics & Installation
 echo "Checking dependencies..."
+MISSING_PACMAN_PKGS=()
+MISSING_AUR_PKGS=()
+
 check_dep() {
     local cmd="$1"
     local desc="$2"
-    local required="${3:-false}"
+    local pacman_pkg="$3"
+    local is_aur="${4:-false}"
+    local required="${5:-false}"
+
     if command -v "$cmd" >/dev/null 2>&1; then
         echo "  [✓] $cmd ($desc)"
         return 0
@@ -31,32 +37,107 @@ check_dep() {
         else
             echo "  [ ] $cmd ($desc) - optional"
         fi
-        return 1
+
+        if [ -n "$pacman_pkg" ]; then
+            if [ "$is_aur" = "true" ]; then
+                MISSING_AUR_PKGS+=("$pacman_pkg")
+            else
+                MISSING_PACMAN_PKGS+=("$pacman_pkg")
+            fi
+        fi
+        return 0
     fi
 }
 
+# Check Qt6 5Compat module (required for Qt5Compat QML imports)
+if pacman -Q qt6-5compat >/dev/null 2>&1 || [ -d /usr/lib/qt6/qml/Qt5Compat ]; then
+    echo "  [✓] qt6-5compat (Qt6 compatibility module)"
+else
+    echo "  [✗] qt6-5compat (Qt6 compatibility module) - REQUIRED"
+    MISSING_PACMAN_PKGS+=("qt6-5compat")
+fi
+
 # Core
-check_dep "quickshell" "Quickshell runtime" false || check_dep "qs" "Quickshell launcher" false
-check_dep "hyprctl" "Hyprland compositor" true
-check_dep "greetd" "greetd display manager" true
-check_dep "jq" "JSON processor" true
-check_dep "python3" "Python runtime" true
-check_dep "wl-paste" "Wayland clipboard utility (wl-clipboard)" false
+if ! command -v quickshell >/dev/null 2>&1 && ! command -v qs >/dev/null 2>&1; then
+    echo "  [✗] quickshell / qs (Quickshell runtime) - REQUIRED"
+    MISSING_AUR_PKGS+=("quickshell")
+else
+    echo "  [✓] quickshell (Quickshell runtime)"
+fi
+
+check_dep "hyprctl" "Hyprland compositor" "hyprland" false true
+check_dep "greetd" "greetd display manager" "greetd" false true
+check_dep "jq" "JSON processor" "jq" false true
+check_dep "python3" "Python runtime" "python" false true
+check_dep "wl-paste" "Wayland clipboard utility" "wl-clipboard" false false
 
 # Theming & Wallpaper
-check_dep "matugen" "Material You color generation" false
-check_dep "magick" "ImageMagick thumbnail scaling" false
-check_dep "awww" "Wallpaper daemon" false || check_dep "swww" "Alternative wallpaper daemon" false
+check_dep "matugen" "Material You color generation" "matugen-bin" true false
+check_dep "magick" "ImageMagick thumbnail scaling" "imagemagick" false false
+
+if ! command -v awww >/dev/null 2>&1 && ! command -v swww >/dev/null 2>&1; then
+    echo "  [ ] awww / swww (Wallpaper daemon) - optional"
+    MISSING_AUR_PKGS+=("awww-git (or swww)")
+else
+    echo "  [✓] wallpaper daemon ($(command -v awww >/dev/null 2>&1 && echo "awww" || echo "swww"))"
+fi
 
 # Media & Hardware
-check_dep "playerctl" "MPRIS player controls" false
-check_dep "pactl" "Audio sink management" false
-check_dep "bluetoothctl" "Bluetooth status" false
-check_dep "ffmpeg" "Screen recording encoding & thumbnails" false
-check_dep "brightnessctl" "Laptop screen brightness" false
-check_dep "ddcutil" "External monitor DDC/CI brightness" false
+check_dep "playerctl" "MPRIS player controls" "playerctl" false false
+check_dep "pactl" "Audio sink management" "libpulse" false false
+check_dep "bluetoothctl" "Bluetooth status" "bluez-utils" false false
+check_dep "ffmpeg" "Screen recording encoding & thumbnails" "ffmpeg" false false
+check_dep "brightnessctl" "Laptop screen brightness" "brightnessctl" false false
+check_dep "ddcutil" "External monitor DDC/CI brightness" "ddcutil" false false
+
+# Recommended fonts for shell and lockscreen
+if fc-list : family 2>/dev/null | grep -qi "inter"; then
+    echo "  [✓] Inter font"
+else
+    echo "  [ ] Inter font (clean UI typography) - recommended"
+    MISSING_PACMAN_PKGS+=("inter-font")
+fi
+
+if fc-list : family 2>/dev/null | grep -qi "nerd font"; then
+    echo "  [✓] Nerd Font icons"
+else
+    echo "  [ ] Nerd Font (lockscreen symbols & shell icons) - recommended"
+    MISSING_PACMAN_PKGS+=("ttf-cascadia-code-nerd")
+fi
 
 echo ""
+
+# Prompt to install missing official packages
+if [ ${#MISSING_PACMAN_PKGS[@]} -gt 0 ]; then
+    if command -v pacman >/dev/null 2>&1; then
+        echo "The following missing packages can be installed via pacman:"
+        for pkg in "${MISSING_PACMAN_PKGS[@]}"; do
+            echo "  - $pkg"
+        done
+        echo ""
+        read -rp "Would you like to install them now with 'sudo pacman -S --needed'? [Y/n] " install_confirm
+        install_confirm="${install_confirm:-y}"
+        if [[ "$install_confirm" =~ ^[Yy]$ ]]; then
+            sudo pacman -S --needed "${MISSING_PACMAN_PKGS[@]}"
+            echo "Packages installed successfully."
+        else
+            echo "Skipping pacman package installation."
+        fi
+    else
+        echo "Notice: Missing packages (${MISSING_PACMAN_PKGS[*]}), but pacman was not found."
+    fi
+    echo ""
+fi
+
+# Display AUR packages notice if any
+if [ ${#MISSING_AUR_PKGS[@]} -gt 0 ]; then
+    echo "Note: The following package(s) can be installed from the AUR:"
+    for pkg in "${MISSING_AUR_PKGS[@]}"; do
+        echo "  - $pkg"
+    done
+    echo "Example: yay -S ${MISSING_AUR_PKGS[*]}"
+    echo ""
+fi
 
 # 3. Copy live config (Excluding internal/dev artifacts)
 if [ "$REPO_DIR" != "$TARGET_DIR" ]; then
