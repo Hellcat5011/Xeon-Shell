@@ -245,15 +245,22 @@ PanelWindow {
                         horizontalAlignment: GreeterState.lockscreenAlignment === "left" ? Text.AlignLeft : Text.AlignRight
                         y: 0
                         text: GreeterState.username.toUpperCase()
-                        color: GreeterState.username === GreeterState.newUserSentinel ? Qt.rgba(GreeterTheme.onPrimaryContainerColor.r, GreeterTheme.onPrimaryContainerColor.g, GreeterTheme.onPrimaryContainerColor.b, 0.4) : GreeterTheme.onPrimaryContainerColor
+                        color: userMArea.containsMouse ? GreeterTheme.primary : (GreeterState.username === GreeterState.newUserSentinel ? Qt.rgba(GreeterTheme.onPrimaryContainerColor.r, GreeterTheme.onPrimaryContainerColor.g, GreeterTheme.onPrimaryContainerColor.b, 0.4) : GreeterTheme.onPrimaryContainerColor)
                         font.family: "Inter"
                         font.weight: Font.Black
                         font.pixelSize: content.px(48)
+                        font.underline: userMArea.containsMouse
                         bottomPadding: content.px(15)
                         visible: !userFieldContainer.isUsernameMode
+                        scale: userMArea.containsMouse ? 1.04 : 1.0
+                        transformOrigin: GreeterState.lockscreenAlignment === "left" ? Item.Left : Item.Right
+                        Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                        Behavior on color { ColorAnimation { duration: 150 } }
                         
                         MouseArea {
+                            id: userMArea
                             anchors.fill: parent
+                            hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 if (userFieldContainer.isUsernameMode) return
@@ -606,9 +613,10 @@ PanelWindow {
                             width: content.px(6)
                             height: width
                             radius: width / 2
-                            color: GreeterTheme.onPrimaryContainerColor
+                            color: sessionMArea.containsMouse ? GreeterTheme.primary : GreeterTheme.onPrimaryContainerColor
                             anchors.verticalCenter: parent.verticalCenter
                             opacity: 0.5
+                            Behavior on color { ColorAnimation { duration: 150 } }
                         }
                         
                         Text {
@@ -619,8 +627,14 @@ PanelWindow {
                             font.weight: Font.Bold
                             font.pixelSize: content.px(14)
                             font.letterSpacing: content.px(2)
+                            opacity: sessionMArea.containsMouse ? 1.0 : 0.6
+                            font.underline: sessionMArea.containsMouse
+                            scale: sessionMArea.containsMouse ? 1.08 : 1.0
+                            transformOrigin: GreeterState.lockscreenAlignment === "left" ? Item.Left : Item.Right
                             y: 0
+                            Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
                             Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on opacity { NumberAnimation { duration: 150 } }
                         }
                     }
                     MouseArea {

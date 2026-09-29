@@ -23,6 +23,12 @@ Scope {
     // ── shared state ──
     readonly property string username: Quickshell.env("USER") || ""
     readonly property string home: Quickshell.env("HOME") || ""
+    readonly property string sessionName: {
+        let s = Quickshell.env("XDG_CURRENT_DESKTOP") || Quickshell.env("XDG_SESSION_DESKTOP") || Quickshell.env("DESKTOP_SESSION") || ""
+        if (s.trim().length > 0) return s
+        if (Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE")) return "Hyprland"
+        return "Wayland"
+    }
     property string currentText: ""
     property string statusMessage: ""
     property bool unlockInProgress: false
@@ -302,15 +308,34 @@ Scope {
                         }
 
                         Text {
+                            id: usernameText
                             anchors.left: Config.lockscreenAlignment === "left" ? parent.left : undefined
                             anchors.right: Config.lockscreenAlignment === "right" ? parent.right : undefined
                             horizontalAlignment: Config.lockscreenAlignment === "left" ? Text.AlignLeft : Text.AlignRight
                             text: root.username.toUpperCase()
-                            color: Theme.onPrimaryContainerColor
+                            color: userMArea.containsMouse ? Theme.primary : Theme.onPrimaryContainerColor
                             font.family: "Inter"
                             font.weight: Font.Black
                             font.pixelSize: content.px(48)
+                            font.underline: userMArea.containsMouse
                             bottomPadding: content.px(15)
+                            scale: userMArea.containsMouse ? 1.04 : 1.0
+                            transformOrigin: Config.lockscreenAlignment === "left" ? Item.Left : Item.Right
+                            Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                            Behavior on color { ColorAnimation { duration: 150 } }
+
+                            MouseArea {
+                                id: userMArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (!root.isPasswordMode) {
+                                        root.isPasswordMode = true
+                                        passwordInput.forceActiveFocus()
+                                    }
+                                }
+                            }
                         }
 
                         // ── PASSWORD & LOCK MORPH CONTAINER ──
@@ -545,27 +570,56 @@ Scope {
                         }
 
                         // Current session indicator
-                        Row {
-                            spacing: content.px(15)
-                            anchors.verticalCenter: parent.verticalCenter
-                            
-                            Rectangle {
-                                width: content.px(6)
-                                height: width
-                                radius: width / 2
-                                color: Theme.onPrimaryContainerColor
+                        Item {
+                            id: sessionItem
+                            width: sessionRow.implicitWidth
+                            height: sessionRow.implicitHeight
+
+                            Row {
+                                id: sessionRow
+                                spacing: content.px(15)
                                 anchors.verticalCenter: parent.verticalCenter
-                                opacity: 0.5
+                                
+                                Rectangle {
+                                    width: content.px(6)
+                                    height: width
+                                    radius: width / 2
+                                    color: sessionMArea.containsMouse ? Theme.primary : Theme.onPrimaryContainerColor
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    opacity: 0.5
+                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                }
+                                
+                                Text {
+                                    id: sessionLabel
+                                    text: root.sessionName.toUpperCase()
+                                    color: sessionMArea.containsMouse ? Theme.primary : Theme.onPrimaryContainerColor
+                                    font.family: "Inter"
+                                    font.weight: Font.Bold
+                                    font.pixelSize: content.px(14)
+                                    font.letterSpacing: content.px(2)
+                                    opacity: sessionMArea.containsMouse ? 1.0 : 0.6
+                                    font.underline: sessionMArea.containsMouse
+                                    scale: sessionMArea.containsMouse ? 1.08 : 1.0
+                                    transformOrigin: Config.lockscreenAlignment === "left" ? Item.Left : Item.Right
+                                    Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                    Behavior on opacity { NumberAnimation { duration: 150 } }
+                                }
                             }
-                            
-                            Text {
-                                text: Quickshell.env("XDG_SESSION_DESKTOP") ? Quickshell.env("XDG_SESSION_DESKTOP").toUpperCase() + " (WAYLAND)" : "WAYLAND SESSION"
-                                color: Theme.onPrimaryContainerColor
-                                font.family: "Inter"
-                                font.weight: Font.Bold
-                                font.pixelSize: content.px(14)
-                                font.letterSpacing: content.px(2)
-                                opacity: 0.5
+
+                            MouseArea {
+                                id: sessionMArea
+                                anchors.fill: parent
+                                anchors.margins: content.px(-10)
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (!root.isPasswordMode) {
+                                        root.isPasswordMode = true
+                                        passwordInput.forceActiveFocus()
+                                    }
+                                }
                             }
                         }
                     }
