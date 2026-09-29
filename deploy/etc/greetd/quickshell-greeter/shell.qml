@@ -227,7 +227,6 @@ PanelWindow {
                         ScriptAction { 
                             script: {
                                 userDisplay.text = userFieldContainer.nextUsername.toUpperCase()
-                                userDisplay.color = (userFieldContainer.nextUsername === GreeterState.newUserSentinel) ? Qt.rgba(GreeterTheme.onPrimaryContainerColor.r, GreeterTheme.onPrimaryContainerColor.g, GreeterTheme.onPrimaryContainerColor.b, 0.4) : GreeterTheme.onPrimaryContainerColor 
                             }
                         }
                         PropertyAction { target: userDisplay; property: "y"; value: content.px(10) }
