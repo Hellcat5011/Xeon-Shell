@@ -38,6 +38,7 @@ check_dep() {
 # Core
 check_dep "quickshell" "Quickshell runtime" false || check_dep "qs" "Quickshell launcher" false
 check_dep "hyprctl" "Hyprland compositor" true
+check_dep "greetd" "greetd display manager" true
 check_dep "jq" "JSON processor" true
 check_dep "python3" "Python runtime" true
 check_dep "wl-paste" "Wayland clipboard utility (wl-clipboard)" false
@@ -152,20 +153,27 @@ if [ -f "$OLD_CONF" ]; then
     cp -n "$OLD_CONF" "$NEW_CONF" || true
 fi
 
-# 8. Privileged section (Greeter & DDC/CI i2c Setup)
+# 8. Privileged section (Xeon Shell Greeter & Hardware Privileges)
 echo ""
 echo "-------------------------------------------------"
-echo "Optional System Configuration (requires sudo):"
-echo "  - Setup greetd Quickshell greeter & permissions"
+echo "System Greeter & Hardware Setup (requires sudo):"
+echo "  - Setup custom Quickshell Greeter for greetd"
+echo "  - Configure user/group permissions & PAM authentication"
 echo "  - Configure i2c permissions for external monitor dimming"
 echo "-------------------------------------------------"
-read -rp "Proceed with system/greeter setup? [y/N] " confirm
+if ! command -v greetd >/dev/null 2>&1; then
+    echo "NOTICE: 'greetd' is not installed yet. You can still set up the files,"
+    echo "but you will need to install 'greetd' with your package manager."
+    echo ""
+fi
+read -rp "Proceed with Xeon Shell greeter and hardware setup? [Y/n] " confirm
+confirm="${confirm:-y}"
 if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-    echo "Skipping privileged setup."
+    echo "Skipping system greeter setup."
     echo ""
     echo "================================================="
     echo "Xeon Shell user configuration is complete!"
-    echo "Run the shell with:"
+    echo "Run the desktop shell with:"
     echo "  qs -c xeon-shell"
     echo "================================================="
     exit 0
@@ -255,8 +263,12 @@ sudo -u "$USER" -g greeter-sync bash -c 'printf "{\n  \"lockscreenAlignment\": \
 echo ""
 echo "================================================="
 echo "Installation complete!"
+echo ""
+echo "To enable the custom Xeon Shell login greeter:"
+echo "  sudo systemctl enable greetd"
+echo ""
 echo "Note: If this is your first time setting up greeter-sync or i2c,"
-echo "please log out or restart your system for new group permissions to take effect."
+echo "please log out or reboot your system for new group permissions to take effect."
 echo ""
 echo "Start Xeon Shell using:"
 echo "  qs -c xeon-shell"
