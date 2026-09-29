@@ -3,3 +3,4 @@ singleton Config 1.0 Config.qml
 singleton NotificationManager 1.0 NotificationManager.qml
 singleton SystemMonitor 1.0 SystemMonitor.qml
 singleton AppInfo 1.0 AppInfo.qml
+BlueLightFilter 1.0 BlueLightFilter.qml

@@ -63,17 +63,51 @@ update() {
        '{status: $status, title: $title, artist: $artist, artUrl: $artUrl, player: $player, position: $position, length: ($lengthUs / 1000000)}'
 }
 
+# ---------------------------------------------------------------------------
+# Event loop
+#
+# The two `playerctl --follow` processes write into a FIFO; the main loop reads
+# from it with a 1s timeout, which doubles as the fallback poll (no separate
+# "tick" subshell needed).
+#
+# Cleanup guarantees:
+#   1. trap on EXIT/INT/TERM/HUP kills exactly the children we started.
+#   2. `setpriv --pdeathsig` makes the kernel signal each follower if this
+#      script dies, even via SIGKILL (where traps cannot run).
+#   3. The loop exits if the process that launched us (Quickshell) is gone.
+# ---------------------------------------------------------------------------
+
+PARENT_PID=$PPID
+FIFO=$(mktemp -u /tmp/quickshell_mpris_fifo.XXXXXX)
+mkfifo "$FIFO"
+pids=()
+
+cleanup() {
+    trap - EXIT INT TERM HUP
+    [ "${#pids[@]}" -gt 0 ] && kill "${pids[@]}" 2>/dev/null
+    rm -f "$FIFO"
+}
+trap cleanup EXIT
+trap 'exit 0' INT TERM HUP
+
+# Open read+write so opening the FIFO never blocks and readers never see EOF
+exec 3<>"$FIFO"
+
+# Prefix that ties a child's lifetime to ours (falls back to nothing if the
+# util-linux `setpriv` binary is missing)
+guard=()
+command -v setpriv >/dev/null 2>&1 && guard=(setpriv --pdeathsig TERM)
+
+"${guard[@]}" stdbuf -oL playerctl metadata --follow --format 'trigger' >&3 2>/dev/null &
+pids+=($!)
+"${guard[@]}" stdbuf -oL playerctl status --follow >&3 2>/dev/null &
+pids+=($!)
+
 # Output initial state
 update
 
-# Listen to metadata changes, status changes, AND a 1-second fallback poll
-# This ensures that if a player switches tracks but has a slight delay in updating
-# its DBus interface, the widget will self-correct instantly on the next tick.
-(
-    while true; do echo "tick"; sleep 1; done &
-    stdbuf -oL playerctl metadata --follow --format 'trigger' 2>/dev/null &
-    stdbuf -oL playerctl status --follow 2>/dev/null &
-    wait
-) | while read -r _; do
+while kill -0 "$PARENT_PID" 2>/dev/null; do
+    # Returns on a playerctl event OR after 1s (fallback poll)
+    read -r -t 1 -u 3 _
     update
 done

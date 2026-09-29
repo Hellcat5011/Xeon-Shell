@@ -11,6 +11,9 @@ Item {
     property string btName: ""
     property string btBattery: ""
     property string btIcon: ""
+    
+    // --- Idle State ---
+    property bool caffeinateEnabled: false
 
     Process {
         id: btProcess

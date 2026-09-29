@@ -61,43 +61,93 @@ OverlayWindow {
         anchors.margins: 20
         spacing: 20
 
-        // --- Header: Bluetooth ---
-        Rectangle {
+        // --- Header: Bluetooth & Caffeinate ---
+        RowLayout {
             Layout.fillWidth: true
-            height: 48
-            radius: Theme.radiusSmall
-            color: Qt.rgba(Theme.onPrimaryContainerColor.r, Theme.onPrimaryContainerColor.g, Theme.onPrimaryContainerColor.b, 0.85)
+            spacing: 12
 
-            RowLayout {
-                anchors.fill: parent
-                spacing: 12
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
+            Rectangle {
+                Layout.fillWidth: true
+                height: 48
+                radius: Theme.radiusSmall
+                color: SystemMonitor.btConnected ? Qt.rgba(Theme.onPrimaryContainerColor.r, Theme.onPrimaryContainerColor.g, Theme.onPrimaryContainerColor.b, 0.85) : Qt.rgba(Theme.onPrimaryContainerColor.r, Theme.onPrimaryContainerColor.g, Theme.onPrimaryContainerColor.b, 0.2)
+                Behavior on color { ColorAnimation { duration: 150 } }
 
-                Shape {
-                    width: 24; height: 24
-                    Layout.alignment: Qt.AlignVCenter
-                    ShapePath {
-                        strokeWidth: 0; fillColor: Theme.inversePrimary
-                        PathSvg { path: "M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z" }
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: 12
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
+
+                    Shape {
+                        width: 24; height: 24
+                        Layout.alignment: Qt.AlignVCenter
+                        ShapePath {
+                            strokeWidth: 0; fillColor: SystemMonitor.btConnected ? Theme.inversePrimary : Theme.onPrimaryContainerColor
+                            Behavior on fillColor { ColorAnimation { duration: 150 } }
+                            PathSvg { path: "M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z" }
+                        }
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: SystemMonitor.btConnected ? SystemMonitor.btName : "Bluetooth Disconnected"
+                        color: SystemMonitor.btConnected ? Theme.inversePrimary : Theme.onPrimaryContainerColor
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                        font.pixelSize: 15
+                        font.bold: true
+                        elide: Text.ElideRight
+                    }
+
+                    Text {
+                        visible: SystemMonitor.btConnected
+                        text: SystemMonitor.btBattery ? (SystemMonitor.btBattery + "%") : ""
+                        color: SystemMonitor.btConnected ? Theme.inversePrimary : Theme.onPrimaryContainerColor
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                        font.pixelSize: 14
+                        font.bold: true
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 48
+                radius: Theme.radiusSmall
+                color: SystemMonitor.caffeinateEnabled ? Qt.rgba(Theme.onPrimaryContainerColor.r, Theme.onPrimaryContainerColor.g, Theme.onPrimaryContainerColor.b, 0.85) : Qt.rgba(Theme.onPrimaryContainerColor.r, Theme.onPrimaryContainerColor.g, Theme.onPrimaryContainerColor.b, 0.2)
+                Behavior on color { ColorAnimation { duration: 150 } }
+
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: 12
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
+
+                    Shape {
+                        width: 24; height: 24
+                        Layout.alignment: Qt.AlignVCenter
+                        ShapePath {
+                            strokeWidth: 0; fillColor: SystemMonitor.caffeinateEnabled ? Theme.inversePrimary : Theme.onPrimaryContainerColor
+                            Behavior on fillColor { ColorAnimation { duration: 150 } }
+                            PathSvg { path: "M4,19h16v2H4V19z M20,3H4v10c0,2.21,1.79,4,4,4h6c2.21,0,4-1.79,4-4v-3h2c1.11,0,2-0.89,2-2V5C22,3.89,21.11,3,20,3z M18,8h-2V5h2V8z" }
+                        }
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Caffeinate"
+                        color: SystemMonitor.caffeinateEnabled ? Theme.inversePrimary : Theme.onPrimaryContainerColor
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                        font.pixelSize: 15
+                        font.bold: true
+                        elide: Text.ElideRight
                     }
                 }
 
-                Text {
-                    Layout.fillWidth: true
-                    text: SystemMonitor.btConnected ? SystemMonitor.btName : "Bluetooth Disconnected"
-                    color: Theme.inversePrimary
-                    font.pixelSize: 15
-                    font.bold: true
-                    elide: Text.ElideRight
-                }
-
-                Text {
-                    visible: SystemMonitor.btConnected
-                    text: SystemMonitor.btBattery ? (SystemMonitor.btBattery + "%") : ""
-                    color: Theme.inversePrimary
-                    font.pixelSize: 14
-                    font.bold: true
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: SystemMonitor.caffeinateEnabled = !SystemMonitor.caffeinateEnabled
                 }
             }
         }

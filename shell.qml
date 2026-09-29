@@ -17,6 +17,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 import Quickshell
 import Quickshell.Io
+import Quickshell.Wayland
 import QtQml
 import "modules" as Modules
 import "services"
@@ -24,6 +25,8 @@ import "services"
 ShellRoot {
     Component.onCompleted: {
         Quickshell.iconTheme = "Slot-Gray-Dark-Icons"
+        dimProcess.command = ["bash", "-c", Quickshell.shellDir + "/scripts/idle-dim-manager.sh startup-restore && " + Quickshell.shellDir + "/scripts/idle-dim-manager.sh cache-displays"]
+        dimProcess.running = true
     }
 
     // Launch custom clipboard watchers
@@ -95,6 +98,66 @@ ShellRoot {
 
     Modules.Lockscreen {
         id: lockscreen
+    }
+
+    Process {
+        id: dimProcess
+    }
+
+    Process {
+        id: restoreProcess
+    }
+
+    BlueLightFilter {
+        id: blueLightFilter
+    }
+
+
+
+    // Note: Quickshell's QML hot-reload (on file save) does not automatically 
+    // re-register top-level Wayland protocols like ext-idle-notify-v1. If you 
+    // change IdleMonitor or IdleInhibitor properties, you MUST perform a full 
+    // shell restart (killall qs && qs -c xeon-shell) for the changes to apply.
+    IdleMonitor {
+        id: idleMonitor
+        enabled: Config.manageIdle
+        timeout: Config.idleTimeout * 60
+        respectInhibitors: true
+        onIsIdleChanged: {
+            if (isIdle) {
+                lockscreen.lock()
+            }
+        }
+    }
+
+    IdleMonitor {
+        id: dimIdleMonitor
+        enabled: Config.manageIdle
+        timeout: Math.max(Config.idleTimeout * 60 - 30, 1)
+        respectInhibitors: true
+        onIsIdleChanged: {
+            if (isIdle) {
+                dimProcess.command = ["bash", Quickshell.shellDir + "/scripts/idle-dim-manager.sh", "dim"]
+                dimProcess.running = true
+            } else {
+                restoreProcess.command = ["bash", Quickshell.shellDir + "/scripts/idle-dim-manager.sh", "restore"]
+                restoreProcess.running = true
+            }
+        }
+    }
+
+    property bool _manageIdleTracker: Config.manageIdle
+    on_ManageIdleTrackerChanged: {
+        if (!_manageIdleTracker) {
+            restoreProcess.command = ["bash", Quickshell.shellDir + "/scripts/idle-dim-manager.sh", "restore"]
+            restoreProcess.running = true
+        }
+    }
+
+    IdleInhibitor {
+        id: idleInhibitor
+        enabled: SystemMonitor.caffeinateEnabled
+        window: desktopTray
     }
 
     // IPC handlers: these let you (or a Hyprland keybind) control the
@@ -181,6 +244,74 @@ ShellRoot {
     }
 
     IpcHandler {
+        target: "config"
+        function setManageIdle(val: string): void {
+            if (val.toLowerCase() === "true") Config.manageIdle = true;
+            else if (val.toLowerCase() === "false") Config.manageIdle = false;
+        }
+    }
+
+    IpcHandler {
+        target: "config_test"
+        function testSave1Min(): void {
+            Config.draftIdleTimeout = 1;
+            Config.save();
+        }
+    }
+
+    IpcHandler {
+        target: "bluelight"
+        function toggle(): void {
+            Config.draftBlueLightEnabled = !Config.blueLightEnabled;
+            Config.save();
+        }
+        function manual_toggle(): void {
+            Config.draftBlueLightManualOn = !Config.blueLightManualOn;
+            Config.save();
+        }
+        function set_fixed_time(start: string, end: string): void {
+            Config.draftBlueLightMode = "fixed_time";
+            Config.draftBlueLightNightStart = start;
+            Config.draftBlueLightNightEnd = end;
+            Config.save();
+        }
+        function set_sunset_sunrise_manual(lat: string, lon: string): void {
+            Config.draftBlueLightMode = "sunset_sunrise";
+            Config.draftBlueLightUseIpLocation = false;
+            Config.draftBlueLightLatitude = lat;
+            Config.draftBlueLightLongitude = lon;
+            Config.save();
+        }
+        function set_sunset_sunrise_ip(): void {
+            Config.draftBlueLightMode = "sunset_sunrise";
+            Config.draftBlueLightUseIpLocation = true;
+            Config.save();
+        }
+        function force_eval(): void {
+            Config.draftBlueLightTransitionMinutes = 1;
+            Config.save();
+        }
+        function set_transition_minutes(m: int): void {
+            Config.draftBlueLightTransitionMinutes = m;
+            Config.save();
+        }
+        function dump(): string {
+            return JSON.stringify({
+                enabled: Config.blueLightEnabled,
+                manualOn: Config.blueLightManualOn,
+                mode: Config.blueLightMode,
+                nightStart: Config.blueLightNightStart,
+                nightEnd: Config.blueLightNightEnd,
+                dayTemp: Config.blueLightDayTemp,
+                nightTemp: Config.blueLightNightTemp,
+                draftManualOn: Config.draftBlueLightManualOn,
+                draftEnabled: Config.draftBlueLightEnabled,
+                draftNightTemp: Config.draftBlueLightNightTemp
+            });
+        }
+    }
+
+    IpcHandler {
         target: "help"
         function display(): string {
             return `
@@ -211,6 +342,9 @@ Available Targets and Methods:
   osd
     volume(val: string)      - Show volume OSD
     brightness(val: string)  - Show brightness OSD
+
+  config
+    setManageIdle(val: string) - Enable or disable idle management (true/false)
 
   clipboard
     toggle()  - Toggle the clipboard manager
@@ -243,6 +377,9 @@ Available Targets and Methods:
   lock
     lock()    - Lock the session
     unlock()  - Force unlock (testing/recovery only)
+
+  bluelight
+    toggle()  - Toggle the blue light filter
 
   help
     display()    - Show this help message

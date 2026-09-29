@@ -1,9 +1,40 @@
-# Ignore user-specific data
+# User-specific runtime data and caches
 data/current-wallpaper.txt
-data/colors.json
-evidence.log
-*~
-*.pyc
+
+# Rust build artifacts (keep the pre-compiled helper binary)
+/target/
+helpers/gamma-ctl/target/*
+!helpers/gamma-ctl/target/release/
+helpers/gamma-ctl/target/release/*
+!helpers/gamma-ctl/target/release/gamma-ctl
+**/*.rs.bk
+
+# Python cache & compiled files
 __pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Backup, temporary, and editor files
+*.bak
+*.tmp
+*.orig
+*.rej
+*~
+*.swp
+*.swo
+.DS_Store
+.directory
+.vscode/
+.idea/
+
+# Reports, testing logs, and agent artifacts
+reports/
 scratch/
 evidence/
+evidence.log
+*.log
+
+# Process & socket files
+*.pid
+*.sock

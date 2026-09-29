@@ -24,10 +24,12 @@ def main():
     }
 
     try:
-        with open(CONF_FILE, "w") as f:
+        temp_file = CONF_FILE + ".tmp"
+        with open(temp_file, "w") as f:
             json.dump(config, f, indent=2)
             f.write("\n")
-        os.chmod(CONF_FILE, 0o664)
+        os.chmod(temp_file, 0o664)
+        os.rename(temp_file, CONF_FILE)
     except Exception as e:
         print(f"ERROR: failed to write {CONF_FILE}: {e}", file=sys.stderr)
         sys.exit(1)
