@@ -436,7 +436,7 @@ ShellRoot {
             });
         }
         function generate(): void {
-            DepthService.generateForCurrentWallpaper();
+            DepthService.generateForCurrentWallpaper(true);
         }
         function clear(): void {
             DepthService.clearCache();

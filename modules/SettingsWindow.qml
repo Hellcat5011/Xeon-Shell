@@ -672,7 +672,7 @@ OverlayWindow {
                                 Button {
                                     text: "Generate now"
                                     enabled: DepthService.installed && !DepthService.busy
-                                    onClicked: DepthService.generateForCurrentWallpaper()
+                                    onClicked: DepthService.generateForCurrentWallpaper(true)
                                     contentItem: Text {
                                         text: parent.text; color: Theme.onPrimaryContainerColor; font.pixelSize: 12; font.weight: Font.Medium
                                         horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter

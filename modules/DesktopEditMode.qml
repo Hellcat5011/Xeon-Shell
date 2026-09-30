@@ -76,7 +76,8 @@ Scope {
                     w: cur[id].w,
                     h: cur[id].h,
                     visible: cur[id].visible !== false,
-                    transparentBg: cur[id].transparentBg === true
+                    transparentBg: cur[id].transparentBg === true,
+                    sendToBackground: cur[id].sendToBackground === true
                 };
             } else {
                 wl[id] = {
@@ -85,7 +86,8 @@ Scope {
                     w: def[id].w,
                     h: def[id].h,
                     visible: true,
-                    transparentBg: false
+                    transparentBg: false,
+                    sendToBackground: false
                 };
             }
         }
@@ -105,6 +107,12 @@ Scope {
     function updateWidgetTransparentBg(id, val) {
         if (!root.workingLayout[id]) return;
         root.workingLayout[id].transparentBg = val;
+        root.layoutRevision++;
+    }
+
+    function updateWidgetSendToBackground(id, val) {
+        if (!root.workingLayout[id]) return;
+        root.workingLayout[id].sendToBackground = val;
         root.layoutRevision++;
     }
 
@@ -222,22 +230,22 @@ Scope {
                     visible: status === Image.Ready
                 }
 
-                // Outside click handler to close open popover
-                MouseArea {
-                    anchors.fill: parent
-                    z: 50
-                    enabled: root.openPopoverWidgetId !== ""
-                    onPressed: (mouse) => {
-                        root.openPopoverWidgetId = "";
-                        mouse.accepted = true;
-                    }
-                }
-
                 // ── 2. Widgets Container (Primary screen only) ──
                 Item {
                     id: widgetsContainer
                     anchors.fill: parent
                     visible: overlayWindow.isPrimary
+
+                    // Outside click handler to close open popover (z: 150 sits above normal widgets, below active widget at z: 200)
+                    MouseArea {
+                        anchors.fill: parent
+                        z: 150
+                        enabled: root.openPopoverWidgetId !== ""
+                        onPressed: (mouse) => {
+                            root.openPopoverWidgetId = "";
+                            mouse.accepted = true;
+                        }
+                    }
 
                     // Repeater for the 4 editable widgets
                     Repeater {
@@ -246,17 +254,18 @@ Scope {
                         delegate: Item {
                             id: widgetWrapper
                             property string widgetId: modelData
+                            z: (root.openPopoverWidgetId === widgetId) ? 200 : 1
                             // binding dependency on layoutRevision
                             property int rev: root.layoutRevision
 
                             property var widgetData: {
                                 // Re-evaluate whenever the working layout is committed (drag/resize release, remove, restore)
                                 let dep = widgetWrapper.rev;
-                                let d = root.workingLayout[widgetId] || ({ x: 0, y: 0, w: 0.2, h: 0.15, visible: true, transparentBg: false });
+                                let d = root.workingLayout[widgetId] || ({ x: 0, y: 0, w: 0.2, h: 0.15, visible: true, transparentBg: false, sendToBackground: false });
                                 // Return a NEW object each time. A var property only emits a change
                                 // signal when it gets a different object, and workingLayout[id] is
                                 // mutated in place, so returning it directly never notifies.
-                                return ({ x: d.x, y: d.y, w: d.w, h: d.h, visible: d.visible, transparentBg: d.transparentBg === true });
+                                return ({ x: d.x, y: d.y, w: d.w, h: d.h, visible: d.visible, transparentBg: d.transparentBg === true, sendToBackground: d.sendToBackground === true });
                             }
                             visible: widgetData.visible !== false
 
@@ -309,16 +318,25 @@ Scope {
                                 z: 4
                             }
 
-                            // Real Widget Content
-                            Loader {
+                            // Real Widget Content (wrapped in DepthMask for live depth preview in edit mode)
+                            DepthMask {
                                 anchors.fill: parent
-                                sourceComponent: {
-                                    switch (widgetId) {
-                                        case "mpris": return mprisComp;
-                                        case "tray": return trayComp;
-                                        case "clock": return clockComp;
-                                        case "calendar": return calendarComp;
-                                        default: return null;
+                                enabled: widgetWrapper.widgetData.sendToBackground === true
+                                screenX: widgetWrapper.x
+                                screenY: widgetWrapper.y
+                                screenWidth: overlayWindow.screenW
+                                screenHeight: overlayWindow.screenH
+
+                                Loader {
+                                    anchors.fill: parent
+                                    sourceComponent: {
+                                        switch (widgetId) {
+                                            case "mpris": return mprisComp;
+                                            case "tray": return trayComp;
+                                            case "clock": return clockComp;
+                                            case "calendar": return calendarComp;
+                                            default: return null;
+                                        }
                                     }
                                 }
                             }
@@ -422,8 +440,8 @@ Scope {
                                 id: gearPopover
                                 visible: root.openPopoverWidgetId === widgetId
                                 z: 200
-                                width: 230
-                                height: 68
+                                width: 240
+                                height: 124
                                 radius: Theme.radiusSmall
                                 color: Qt.rgba(Theme.inversePrimary.r, Theme.inversePrimary.g, Theme.inversePrimary.b, 0.98)
                                 border.width: 1
@@ -439,34 +457,71 @@ Scope {
                                     onPressed: (mouse) => { mouse.accepted = true; }
                                 }
 
-                                RowLayout {
+                                ColumnLayout {
                                     anchors.fill: parent
                                     anchors.margins: 12
                                     spacing: 10
 
-                                    ColumnLayout {
+                                    // 1. Transparent background
+                                    RowLayout {
                                         Layout.fillWidth: true
-                                        spacing: 2
+                                        spacing: 10
 
-                                        Text {
-                                            text: "Transparent background"
-                                            color: Theme.onPrimaryContainerColor
-                                            font.pixelSize: 12
-                                            font.weight: Font.Medium
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 2
+
+                                            Text {
+                                                text: "Transparent background"
+                                                color: Theme.onPrimaryContainerColor
+                                                font.pixelSize: 12
+                                                font.weight: Font.Medium
+                                            }
+
+                                            Text {
+                                                text: "Hide widget container fill"
+                                                color: Theme.onPrimaryContainerColor
+                                                opacity: 0.6
+                                                font.pixelSize: 10
+                                            }
                                         }
 
-                                        Text {
-                                            text: "Hide widget container fill"
-                                            color: Theme.onPrimaryContainerColor
-                                            opacity: 0.6
-                                            font.pixelSize: 10
+                                        PillSwitch {
+                                            Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                            checked: widgetWrapper.widgetData.transparentBg
+                                            onToggled: (val) => root.updateWidgetTransparentBg(widgetId, val)
                                         }
                                     }
 
-                                    PillSwitch {
-                                        Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
-                                        checked: widgetWrapper.widgetData.transparentBg
-                                        onToggled: (val) => root.updateWidgetTransparentBg(widgetId, val)
+                                    // 2. Send to background (Wallpaper depth)
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 10
+
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 2
+
+                                            Text {
+                                                text: "Send to background"
+                                                color: Theme.onPrimaryContainerColor
+                                                font.pixelSize: 12
+                                                font.weight: Font.Medium
+                                            }
+
+                                            Text {
+                                                text: "Pass behind wallpaper scenery"
+                                                color: Theme.onPrimaryContainerColor
+                                                opacity: 0.6
+                                                font.pixelSize: 10
+                                            }
+                                        }
+
+                                        PillSwitch {
+                                            Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                            checked: widgetWrapper.widgetData.sendToBackground
+                                            onToggled: (val) => root.updateWidgetSendToBackground(widgetId, val)
+                                        }
                                     }
                                 }
                             }

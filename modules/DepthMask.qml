@@ -5,13 +5,14 @@ import "../services"
 Item {
     id: root
 
+    property bool enabled: true
     property real screenX: 0
     property real screenY: 0
     property real screenWidth: 1920
     property real screenHeight: 1080
 
-    // Only active when DepthService is enabled, mask URL is non-empty, and mask is marked visible
-    readonly property bool isMaskActive: DepthService.enabled && DepthService.maskUrl !== "" && DepthService.maskVisible
+    // Only active when enabled, DepthService is enabled, mask URL is non-empty, and mask is marked visible
+    readonly property bool isMaskActive: root.enabled && DepthService.enabled && DepthService.maskUrl !== "" && DepthService.maskVisible
 
     default property alias content: contentWrapper.data
 
@@ -19,15 +20,8 @@ Item {
     Item {
         id: contentWrapper
         anchors.fill: parent
+        visible: !root.isMaskActive
         layer.enabled: root.isMaskActive
-        layer.effect: MultiEffect {
-            maskEnabled: true
-            maskInverted: true
-            maskThresholdMin: 0.0
-            maskSpreadAtMin: 1.0
-            opacity: DepthService.maskFade
-            maskSource: maskSourceItem
-        }
     }
 
     // 2. Offscreen mask source item
@@ -37,21 +31,29 @@ Item {
         visible: false
         layer.enabled: root.isMaskActive
 
-        Loader {
-            anchors.fill: parent
-            active: root.isMaskActive
-            sourceComponent: Image {
-                fillMode: Image.PreserveAspectCrop
-                width: root.screenWidth
-                height: root.screenHeight
-                x: -root.screenX
-                y: -root.screenY
-                source: DepthService.maskUrl
-                sourceSize.width: root.screenWidth
-                sourceSize.height: root.screenHeight
-                asynchronous: true
-                cache: true
-            }
+        Image {
+            x: -root.screenX
+            y: -root.screenY
+            width: root.screenWidth
+            height: root.screenHeight
+            fillMode: Image.PreserveAspectCrop
+            source: DepthService.maskUrl
+            sourceSize.width: root.screenWidth
+            sourceSize.height: root.screenHeight
+            asynchronous: true
+            cache: true
         }
+    }
+
+    // 3. Standalone MultiEffect
+    MultiEffect {
+        id: effect
+        anchors.fill: parent
+        visible: root.isMaskActive
+        source: contentWrapper
+        maskEnabled: true
+        maskSource: maskSourceItem
+        maskInverted: true
+        opacity: DepthService.maskFade
     }
 }

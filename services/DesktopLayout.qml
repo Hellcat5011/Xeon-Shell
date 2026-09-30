@@ -60,6 +60,7 @@ Item {
                     h: 170,
                     visible: true,
                     transparentBg: false,
+                    sendToBackground: false,
                     isStored: false
                 };
             case "tray": {
@@ -71,6 +72,7 @@ Item {
                     h: 50,
                     visible: true,
                     transparentBg: false,
+                    sendToBackground: false,
                     isStored: false
                 };
             }
@@ -83,6 +85,7 @@ Item {
                     h: h,
                     visible: true,
                     transparentBg: false,
+                    sendToBackground: false,
                     isStored: false
                 };
             }
@@ -94,10 +97,11 @@ Item {
                     h: 320,
                     visible: true,
                     transparentBg: false,
+                    sendToBackground: false,
                     isStored: false
                 };
             default:
-                return { x: 0, y: 0, w: 100, h: 100, visible: true, transparentBg: false, isStored: false };
+                return { x: 0, y: 0, w: 100, h: 100, visible: true, transparentBg: false, sendToBackground: false, isStored: false };
         }
     }
 
@@ -123,6 +127,7 @@ Item {
                 h: h,
                 visible: item.visible !== false,
                 transparentBg: item.transparentBg === true,
+                sendToBackground: item.sendToBackground === true,
                 isStored: true
             };
         }
@@ -143,7 +148,8 @@ Item {
                 w: 400 / sw,
                 h: 170 / sh,
                 visible: true,
-                transparentBg: false
+                transparentBg: false,
+                sendToBackground: false
             },
             "tray": {
                 x: (sw - 30 - trayW) / sw,
@@ -151,7 +157,8 @@ Item {
                 w: trayW / sw,
                 h: 50 / sh,
                 visible: true,
-                transparentBg: false
+                transparentBg: false,
+                sendToBackground: false
             },
             "clock": {
                 x: (sw - 390) / sw,
@@ -159,7 +166,8 @@ Item {
                 w: 360 / sw,
                 h: clockH / sh,
                 visible: true,
-                transparentBg: false
+                transparentBg: false,
+                sendToBackground: false
             },
             "calendar": {
                 x: (sw - 390) / sw,
@@ -167,7 +175,8 @@ Item {
                 w: 360 / sw,
                 h: 320 / sh,
                 visible: true,
-                transparentBg: false
+                transparentBg: false,
+                sendToBackground: false
             }
         };
     }

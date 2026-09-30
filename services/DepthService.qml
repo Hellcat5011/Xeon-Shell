@@ -67,6 +67,9 @@ Item {
                                 if (data.installed) {
                                     root.activeDevice = (Config.depthDevice === "gpu" && root.gpuInstalled) ? "NVIDIA GPU (CUDA)" :
                                                         (Config.depthDevice === "auto" && root.gpuInstalled ? "NVIDIA GPU (CUDA)" : "CPU");
+                                    if (root.enabled && root.currentWallpaper && root.currentMaskPath === "") {
+                                        root.generateForCurrentWallpaper();
+                                    }
                                 } else {
                                     root.activeDevice = "Not installed";
                                 }
@@ -240,7 +243,7 @@ Item {
         root.queueProgress = "";
     }
 
-    function wallpaperApplying(path) {
+    function wallpaperApplying(path, force) {
         // Called by WallpaperSelector.applyWallpaper BEFORE set-wallpaper.sh is launched
         root.applyStartTime = Date.now();
         root.targetWallpaperPath = path;
@@ -250,7 +253,7 @@ Item {
         root.maskVisible = false;
         transitionTimer.stop();
 
-        if (!root.enabled || !root.installed) {
+        if ((!root.enabled && !force) || !root.installed) {
             root.currentMaskPath = "";
             root.maskUrl = "";
             return;
@@ -291,7 +294,8 @@ Item {
         root.pendingMaskPath = maskPath;
 
         let elapsed = Date.now() - root.applyStartTime;
-        let delay = Math.max(0, root.daemonTransitionDuration - elapsed + 50);
+        let isCurrent = (root.applyStartTime === 0 || root.targetWallpaperPath === root.currentWallpaper);
+        let delay = isCurrent ? 0 : Math.max(0, root.daemonTransitionDuration - elapsed + 50);
 
         if (delay > 0) {
             transitionTimer.interval = delay;
@@ -357,12 +361,13 @@ Item {
         }
     }
 
-    function generateForCurrentWallpaper() {
-        if (!root.enabled || !root.installed) return;
+    function generateForCurrentWallpaper(force) {
+        if (!root.installed) return;
+        if (!root.enabled && !force) return;
         if (!root.currentWallpaper || root.currentWallpaper.length === 0) {
             detectCurrentWallpaper();
         } else {
-            root.wallpaperApplying(root.currentWallpaper);
+            root.wallpaperApplying(root.currentWallpaper, force);
         }
     }
 
@@ -402,6 +407,18 @@ Item {
             root.currentMaskPath = "";
             root.maskUrl = "";
             root.queueProgress = "";
+        }
+    }
+
+    onInstalledChanged: {
+        if (root.installed && root.enabled && root.currentWallpaper && root.currentMaskPath === "") {
+            root.generateForCurrentWallpaper();
+        }
+    }
+
+    onCurrentWallpaperChanged: {
+        if (root.installed && root.enabled && root.currentWallpaper && root.currentMaskPath === "") {
+            root.generateForCurrentWallpaper();
         }
     }
 

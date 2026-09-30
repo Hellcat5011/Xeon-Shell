@@ -30,6 +30,7 @@ PanelWindow {
 
     DepthMask {
         anchors.fill: parent
+        enabled: root.geom.sendToBackground === true
         screenX: Math.round(root.geom.x)
         screenY: Math.round(root.geom.y)
         screenWidth: root.screen ? root.screen.width : DesktopLayout.screenWidth

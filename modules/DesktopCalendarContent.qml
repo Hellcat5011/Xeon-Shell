@@ -113,23 +113,30 @@ Item {
         // DAYS VIEW
         GridLayout {
             anchors.top: header.bottom
-            anchors.topMargin: Math.round(12 * root.scaleFactor)
-            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.topMargin: Math.round(8 * root.scaleFactor)
+            anchors.bottomMargin: Math.round(4 * root.scaleFactor)
             columns: 7
-            columnSpacing: Math.max(4, Math.round(8 * root.scaleFactor))
-            rowSpacing: Math.max(4, Math.round(8 * root.scaleFactor))
+            columnSpacing: Math.max(2, Math.round(4 * root.scaleFactor))
+            rowSpacing: Math.max(2, Math.round(4 * root.scaleFactor))
             visible: root.viewMode === "days"
 
             Repeater {
                 model: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
-                Text {
-                    text: modelData
-                    color: Theme.onPrimaryContainerColor
-                    font.family: "CaskaydiaCove Nerd Font Mono"
-                    font.pixelSize: Math.max(10, Math.round(13 * root.scaleFactor))
-                    font.bold: true
-                    horizontalAlignment: Text.AlignHCenter
-                    Layout.preferredWidth: Math.max(20, Math.round(28 * root.scaleFactor))
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Text {
+                        anchors.centerIn: parent
+                        text: modelData
+                        color: Theme.onPrimaryContainerColor
+                        font.family: "CaskaydiaCove Nerd Font Mono"
+                        font.pixelSize: Math.max(10, Math.round(13 * root.scaleFactor))
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
                 }
             }
 
@@ -142,28 +149,37 @@ Item {
                     let arr = [];
                     for (let i = 0; i < startDay; i++) arr.push("");
                     for (let i = 1; i <= daysInMonth; i++) arr.push(i.toString());
+                    let totalCells = (arr.length > 35) ? 42 : 35;
+                    while (arr.length < totalCells) arr.push("");
                     return arr;
                 }
 
-                Rectangle {
-                    Layout.preferredWidth: Math.max(20, Math.round(28 * root.scaleFactor))
-                    Layout.preferredHeight: Math.max(20, Math.round(28 * root.scaleFactor))
-                    radius: 3
-                    property bool isToday: {
-                        if (modelData === "") return false;
-                        let now = new Date();
-                        return (now.getDate().toString() === modelData) && 
-                               (now.getMonth() === root.selectedDate.getMonth()) && 
-                               (now.getFullYear() === root.selectedDate.getFullYear());
-                    }
-                    color: isToday ? Theme.primary : "transparent"
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
 
-                    Text {
+                    Rectangle {
                         anchors.centerIn: parent
-                        text: modelData
-                        color: parent.isToday ? Theme.background : Theme.onPrimaryContainerColor
-                        font.family: "CaskaydiaCove Nerd Font Mono"
-                        font.pixelSize: Math.max(10, Math.round(13 * root.scaleFactor))
+                        width: Math.max(16, Math.min(parent.width, parent.height) - 4)
+                        height: width
+                        radius: width / 2
+                        property bool isToday: {
+                            if (modelData === "") return false;
+                            let now = new Date();
+                            return (now.getDate().toString() === modelData) && 
+                                   (now.getMonth() === root.selectedDate.getMonth()) && 
+                                   (now.getFullYear() === root.selectedDate.getFullYear());
+                        }
+                        color: isToday ? Theme.primary : "transparent"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: modelData
+                            color: parent.isToday ? Theme.background : Theme.onPrimaryContainerColor
+                            font.family: "CaskaydiaCove Nerd Font Mono"
+                            font.pixelSize: Math.max(10, Math.round(13 * root.scaleFactor))
+                            font.bold: parent.isToday
+                        }
                     }
                 }
             }
