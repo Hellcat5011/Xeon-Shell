@@ -33,11 +33,20 @@ PanelWindow {
     // Auto-hide on live desktop when empty
     visible: root.geom.visible && root.hasItems
 
-    DesktopTrayContent {
-        id: trayContent
+    DepthMask {
         anchors.fill: parent
-        interactive: true
-        editMode: false
-        anchorWindow: root
+        screenX: Math.round(root.geom.x)
+        screenY: Math.round(root.geom.y)
+        screenWidth: root.screen ? root.screen.width : DesktopLayout.screenWidth
+        screenHeight: root.screen ? root.screen.height : DesktopLayout.screenHeight
+
+        DesktopTrayContent {
+            id: trayContent
+            anchors.fill: parent
+            interactive: true
+            editMode: false
+            anchorWindow: root
+            transparentBg: root.geom.transparentBg
+        }
     }
 }

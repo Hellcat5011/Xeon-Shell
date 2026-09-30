@@ -12,6 +12,7 @@ Item {
     property bool interactive: true
     property bool editMode: false
     property var anchorWindow: null
+    property bool transparentBg: false
 
     readonly property real defaultHeight: 50
     readonly property bool isVertical: root.height > root.width * 1.2
@@ -22,7 +23,9 @@ Item {
 
     property real contentWidth: Math.max(50, trayItemsRow.implicitWidth + 30)
 
-    DesktopWidgetBackground {}
+    DesktopWidgetBackground {
+        transparentBg: root.transparentBg
+    }
 
     QsMenuAnchor {
         id: menuAnchor

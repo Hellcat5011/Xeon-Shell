@@ -9,12 +9,15 @@ Item {
     id: root
 
     property bool interactive: true
+    property bool transparentBg: false
 
     readonly property real defaultWidth: 400
     readonly property real defaultHeight: 170
     readonly property real scaleFactor: Math.max(0.55, Math.min(width / defaultWidth, height / defaultHeight))
 
-    DesktopWidgetBackground {}
+    DesktopWidgetBackground {
+        transparentBg: root.transparentBg
+    }
 
     RowLayout {
         anchors.fill: parent

@@ -13,10 +13,12 @@ Scope {
     property string currentWallpaperPath: ""
     property var workingLayout: ({})
     property int layoutRevision: 0
+    property string openPopoverWidgetId: ""
 
     signal closed(bool saved)
 
     function startEditMode() {
+        root.openPopoverWidgetId = "";
         initWorkingLayout();
         refreshWallpaper();
         root.active = true;
@@ -73,7 +75,8 @@ Scope {
                     y: cur[id].y,
                     w: cur[id].w,
                     h: cur[id].h,
-                    visible: cur[id].visible !== false
+                    visible: cur[id].visible !== false,
+                    transparentBg: cur[id].transparentBg === true
                 };
             } else {
                 wl[id] = {
@@ -81,7 +84,8 @@ Scope {
                     y: def[id].y,
                     w: def[id].w,
                     h: def[id].h,
-                    visible: true
+                    visible: true,
+                    transparentBg: false
                 };
             }
         }
@@ -98,6 +102,12 @@ Scope {
         root.layoutRevision++;
     }
 
+    function updateWidgetTransparentBg(id, val) {
+        if (!root.workingLayout[id]) return;
+        root.workingLayout[id].transparentBg = val;
+        root.layoutRevision++;
+    }
+
     function removeWidget(id) {
         if (!root.workingLayout[id]) return;
         root.workingLayout[id].visible = false;
@@ -111,12 +121,14 @@ Scope {
     }
 
     function saveAndClose() {
+        root.openPopoverWidgetId = "";
         DesktopLayout.saveLayout(root.workingLayout);
         root.active = false;
         root.closed(true);
     }
 
     function discardAndClose() {
+        root.openPopoverWidgetId = "";
         root.active = false;
         root.closed(false);
     }
@@ -173,14 +185,26 @@ Scope {
             Shortcut {
                 sequence: "Escape"
                 enabled: root.active
-                onActivated: root.discardAndClose()
+                onActivated: {
+                    if (root.openPopoverWidgetId !== "") {
+                        root.openPopoverWidgetId = "";
+                    } else {
+                        root.discardAndClose();
+                    }
+                }
             }
 
             Item {
                 id: focusScope
                 anchors.fill: parent
                 focus: root.active
-                Keys.onEscapePressed: root.discardAndClose()
+                Keys.onEscapePressed: {
+                    if (root.openPopoverWidgetId !== "") {
+                        root.openPopoverWidgetId = "";
+                    } else {
+                        root.discardAndClose();
+                    }
+                }
 
                 // ── 1. Wallpaper background ──
                 Rectangle {
@@ -196,6 +220,17 @@ Scope {
                     sourceSize.height: overlayWindow.screenH
                     cache: false
                     visible: status === Image.Ready
+                }
+
+                // Outside click handler to close open popover
+                MouseArea {
+                    anchors.fill: parent
+                    z: 50
+                    enabled: root.openPopoverWidgetId !== ""
+                    onPressed: (mouse) => {
+                        root.openPopoverWidgetId = "";
+                        mouse.accepted = true;
+                    }
                 }
 
                 // ── 2. Widgets Container (Primary screen only) ──
@@ -217,11 +252,11 @@ Scope {
                             property var widgetData: {
                                 // Re-evaluate whenever the working layout is committed (drag/resize release, remove, restore)
                                 let dep = widgetWrapper.rev;
-                                let d = root.workingLayout[widgetId] || ({ x: 0, y: 0, w: 0.2, h: 0.15, visible: true });
+                                let d = root.workingLayout[widgetId] || ({ x: 0, y: 0, w: 0.2, h: 0.15, visible: true, transparentBg: false });
                                 // Return a NEW object each time. A var property only emits a change
                                 // signal when it gets a different object, and workingLayout[id] is
                                 // mutated in place, so returning it directly never notifies.
-                                return ({ x: d.x, y: d.y, w: d.w, h: d.h, visible: d.visible });
+                                return ({ x: d.x, y: d.y, w: d.w, h: d.h, visible: d.visible, transparentBg: d.transparentBg === true });
                             }
                             visible: widgetData.visible !== false
 
@@ -268,7 +303,9 @@ Scope {
                                 color: "transparent"
                                 radius: 10
                                 border.width: 1.5
-                                border.color: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.75)
+                                border.color: widgetWrapper.widgetData.transparentBg
+                                    ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.95)
+                                    : Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.75)
                                 z: 4
                             }
 
@@ -288,22 +325,22 @@ Scope {
 
                             Component {
                                 id: mprisComp
-                                DesktopMprisContent { interactive: false }
+                                DesktopMprisContent { interactive: false; transparentBg: widgetWrapper.widgetData.transparentBg }
                             }
 
                             Component {
                                 id: trayComp
-                                DesktopTrayContent { interactive: false; editMode: true }
+                                DesktopTrayContent { interactive: false; editMode: true; transparentBg: widgetWrapper.widgetData.transparentBg }
                             }
 
                             Component {
                                 id: clockComp
-                                DesktopClockContent { interactive: false }
+                                DesktopClockContent { interactive: false; transparentBg: widgetWrapper.widgetData.transparentBg }
                             }
 
                             Component {
                                 id: calendarComp
-                                DesktopCalendarContent { interactive: false }
+                                DesktopCalendarContent { interactive: false; transparentBg: widgetWrapper.widgetData.transparentBg }
                             }
 
                             // Drag MouseArea covering the widget
@@ -339,6 +376,99 @@ Scope {
 
                                 onReleased: widgetWrapper.commitGeometry()
                                 onCanceled: widgetWrapper.cancelGeometry()
+                            }
+
+                            // Gear Settings Button (Top-Left)
+                            Rectangle {
+                                id: gearBtn
+                                anchors.top: parent.top
+                                anchors.left: parent.left
+                                anchors.margins: 6
+                                width: 24
+                                height: 24
+                                radius: 12
+                                z: 20
+                                color: (gearMouse.containsMouse || root.openPopoverWidgetId === widgetId) ? Theme.primary : Qt.rgba(Theme.inversePrimary.r, Theme.inversePrimary.g, Theme.inversePrimary.b, 0.85)
+                                border.width: 1
+                                border.color: (gearMouse.containsMouse || root.openPopoverWidgetId === widgetId) ? Theme.primary : Theme.outlineVariant
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "⚙"
+                                    color: (gearMouse.containsMouse || root.openPopoverWidgetId === widgetId) ? Theme.inversePrimary : Theme.onPrimaryContainerColor
+                                    font.pixelSize: 13
+                                }
+
+                                MouseArea {
+                                    id: gearMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    preventStealing: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onPressed: (mouse) => { mouse.accepted = true; }
+                                    onClicked: (mouse) => {
+                                        mouse.accepted = true;
+                                        if (root.openPopoverWidgetId === widgetId) {
+                                            root.openPopoverWidgetId = "";
+                                        } else {
+                                            root.openPopoverWidgetId = widgetId;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Popover Anchored to Gear Button
+                            Rectangle {
+                                id: gearPopover
+                                visible: root.openPopoverWidgetId === widgetId
+                                z: 200
+                                width: 230
+                                height: 68
+                                radius: Theme.radiusSmall
+                                color: Qt.rgba(Theme.inversePrimary.r, Theme.inversePrimary.g, Theme.inversePrimary.b, 0.98)
+                                border.width: 1
+                                border.color: Theme.outlineVariant
+
+                                // Stays fully on screen: flip horizontally / vertically near screen edges
+                                x: (widgetWrapper.x + 6 + width > overlayWindow.screenW) ? Math.max(-widgetWrapper.x, widgetWrapper.width - width - 6) : 6
+                                y: (widgetWrapper.y + 36 + height > overlayWindow.screenH) ? Math.max(-widgetWrapper.y, -height - 6) : 36
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    preventStealing: true
+                                    onPressed: (mouse) => { mouse.accepted = true; }
+                                }
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 12
+                                    spacing: 10
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 2
+
+                                        Text {
+                                            text: "Transparent background"
+                                            color: Theme.onPrimaryContainerColor
+                                            font.pixelSize: 12
+                                            font.weight: Font.Medium
+                                        }
+
+                                        Text {
+                                            text: "Hide widget container fill"
+                                            color: Theme.onPrimaryContainerColor
+                                            opacity: 0.6
+                                            font.pixelSize: 10
+                                        }
+                                    }
+
+                                    PillSwitch {
+                                        Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                        checked: widgetWrapper.widgetData.transparentBg
+                                        onToggled: (val) => root.updateWidgetTransparentBg(widgetId, val)
+                                    }
+                                }
                             }
 
                             // 'x' Remove Button (Top-Right)

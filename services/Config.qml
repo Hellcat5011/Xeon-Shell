@@ -45,6 +45,13 @@ Item {
     property alias blueLightDayTemp: settings.blueLightDayTemp
     property alias blueLightNightTemp: settings.blueLightNightTemp
     property alias desktopLayout: settings.desktopLayout
+    property alias overviewWorkspaceCount: settings.overviewWorkspaceCount
+    property alias depthEffectEnabled: settings.depthEffectEnabled
+    property alias depthAutoGenerate: settings.depthAutoGenerate
+    property alias depthPregenerate: settings.depthPregenerate
+    property alias depthThreshold: settings.depthThreshold
+    property alias depthFeather: settings.depthFeather
+    property alias depthDevice: settings.depthDevice
 
     // Draft values — the Settings UI edits these. They do not affect the
     // shell's live behavior until save() is called.
@@ -66,6 +73,12 @@ Item {
     property int    draftBlueLightTransitionMinutes: 30
     property int    draftBlueLightDayTemp: 6500
     property int    draftBlueLightNightTemp: 4500
+    property bool   draftDepthEffectEnabled: false
+    property bool   draftDepthAutoGenerate: true
+    property bool   draftDepthPregenerate: true
+    property int    draftDepthThreshold: 30
+    property int    draftDepthFeather: 8
+    property string draftDepthDevice: "cpu"
 
     // True if any draft differs from its corresponding live value.
     readonly property bool isDirty:
@@ -86,7 +99,13 @@ Item {
         draftBlueLightLongitude !== blueLightLongitude ||
         draftBlueLightTransitionMinutes !== blueLightTransitionMinutes ||
         draftBlueLightDayTemp !== blueLightDayTemp ||
-        draftBlueLightNightTemp !== blueLightNightTemp
+        draftBlueLightNightTemp !== blueLightNightTemp ||
+        draftDepthEffectEnabled !== depthEffectEnabled ||
+        draftDepthAutoGenerate !== depthAutoGenerate ||
+        draftDepthPregenerate !== depthPregenerate ||
+        draftDepthThreshold !== depthThreshold ||
+        draftDepthFeather !== depthFeather ||
+        draftDepthDevice !== depthDevice
 
     function save() {
         let needsRestart = false;
@@ -112,6 +131,12 @@ Item {
         blueLightTransitionMinutes = draftBlueLightTransitionMinutes
         blueLightDayTemp = draftBlueLightDayTemp
         blueLightNightTemp = draftBlueLightNightTemp
+        depthEffectEnabled = draftDepthEffectEnabled
+        depthAutoGenerate = draftDepthAutoGenerate
+        depthPregenerate = draftDepthPregenerate
+        depthThreshold = draftDepthThreshold
+        depthFeather = draftDepthFeather
+        depthDevice = draftDepthDevice
 
         if (needsRestart) {
             restartProcess.running = true;
@@ -137,6 +162,12 @@ Item {
         draftBlueLightTransitionMinutes = blueLightTransitionMinutes
         draftBlueLightDayTemp = blueLightDayTemp
         draftBlueLightNightTemp = blueLightNightTemp
+        draftDepthEffectEnabled = depthEffectEnabled
+        draftDepthAutoGenerate = depthAutoGenerate
+        draftDepthPregenerate = depthPregenerate
+        draftDepthThreshold = depthThreshold
+        draftDepthFeather = depthFeather
+        draftDepthDevice = depthDevice
     }
 
     Settings {
@@ -172,5 +203,12 @@ Item {
         property int blueLightDayTemp: 6500
         property int blueLightNightTemp: 4500
         property string desktopLayout: ""
+        property int overviewWorkspaceCount: 8
+        property bool depthEffectEnabled: false
+        property bool depthAutoGenerate: true
+        property bool depthPregenerate: true
+        property int depthThreshold: 30
+        property int depthFeather: 8
+        property string depthDevice: "cpu"
     }
 }

@@ -136,7 +136,7 @@ OverlayWindow {
     }
 
     property var searchIndex: [
-        "Wallpaper Wallpaper Directory The absolute path to the directory containing your wallpaper images. Wallpaper Daemon The backend service used to set and render your desktop wallpapers.",
+        "Wallpaper Wallpaper Directory The absolute path to the directory containing your wallpaper images. Wallpaper Daemon The backend service used to set and render your desktop wallpapers. Wallpaper Depth Makes desktop widgets pass behind wallpaper foregrounds. Status Active Device Install Install GPU support Compute device Generate automatically Pre-generate Foreground threshold Edge feather Generate now Clear cache",
         "Lock Screen Lockscreen Power Menu Allow session control actions (Suspend, Reboot, Shutdown) directly from the lockscreen. Lockscreen Alignment Position the lockscreen elements aligned to the left or right edge of the screen.",
         "Greeter Remember Last User Save the last logged-in user and session to automatically pre-select them on the next boot.",
         "Display Manage idle behavior Automatically lock the screen when the system is idle. Lock timeout Time in minutes before the screen is locked. Blue Light Filter Toggle the blue light filter (night light). Turn on now Manually force the blue light filter on. Mode Fixed Time, Sunset/Sunrise Night Schedule Night starts Night ends The filter is active between these times Coordinates Use realtime location based on IP Transition Duration Time in minutes for the color temperature to transition. Day Temperature Color temperature during the day (K). Night Temperature Color temperature at night (K).",
@@ -459,6 +459,247 @@ OverlayWindow {
                                 model: ["awww", "swww", "hyprpaper"]
                                 currentIndex: model.indexOf(Config.draftWallpaperDaemon)
                                 onActivated: Config.draftWallpaperDaemon = model[currentIndex]
+                            }
+                        }
+
+                        // Setting: Wallpaper Depth (Master Toggle)
+                        RowLayout {
+                            visible: root.fuzzyMatch(searchField.text, "Wallpaper Depth Makes desktop widgets pass behind wallpaper foregrounds.")
+                            Layout.fillWidth: true
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+                                Text { text: "Wallpaper Depth"; color: Theme.onPrimaryContainerColor; font.pixelSize: 15; font.weight: Font.Medium }
+                                Text { text: "Makes desktop widgets pass behind wallpaper foregrounds."; color: Theme.onPrimaryContainerColor; opacity: 0.6; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                            }
+
+                            PillSwitch {
+                                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                checked: Config.draftDepthEffectEnabled
+                                onToggled: (value) => Config.draftDepthEffectEnabled = value
+                            }
+                        }
+
+                        // Child Setting 1: Status & Active Device
+                        RowLayout {
+                            visible: Config.draftDepthEffectEnabled && root.fuzzyMatch(searchField.text, "Status Active Device")
+                            Layout.fillWidth: true
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+                                Text { text: "Status & Device"; color: Theme.onPrimaryContainerColor; font.pixelSize: 15; font.weight: Font.Medium }
+                                Text {
+                                    text: "Status: " + (DepthService.installed ? DepthService.statusText : "Not installed") + " • Device: " + DepthService.activeDevice + " • Cache: " + DepthService.cacheSizeFormatted
+                                    color: Theme.onPrimaryContainerColor
+                                    opacity: 0.7
+                                    font.pixelSize: 12
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                }
+                            }
+
+                            Row {
+                                spacing: 8
+                                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+
+                                Button {
+                                    text: DepthService.installed ? "Reinstall CPU (~120 MB)" : "Install (~120 MB)"
+                                    enabled: !DepthService.busy
+                                    onClicked: DepthService.install(false)
+                                    contentItem: Text {
+                                        text: parent.text; color: Theme.onPrimaryContainerColor; font.pixelSize: 12; font.weight: Font.Medium
+                                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                                    }
+                                    background: Rectangle {
+                                        implicitHeight: 30; implicitWidth: 140
+                                        color: parent.down ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.35) :
+                                               (parent.hovered ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.25) : Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.12))
+                                        radius: 15; border.width: 1; border.color: Theme.primary
+                                    }
+                                }
+
+                                Button {
+                                    visible: DepthService.hasNvidiaGpu
+                                    text: "Install GPU support (~1.5 GB)"
+                                    enabled: !DepthService.busy
+                                    onClicked: DepthService.install(true)
+                                    contentItem: Text {
+                                        text: parent.text; color: Theme.onPrimaryContainerColor; font.pixelSize: 12; font.weight: Font.Medium
+                                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                                    }
+                                    background: Rectangle {
+                                        implicitHeight: 30; implicitWidth: 175
+                                        color: parent.down ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.35) :
+                                               (parent.hovered ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.25) : Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.12))
+                                        radius: 15; border.width: 1; border.color: Theme.primary
+                                    }
+                                }
+                            }
+                        }
+
+                        // Child Setting 2: Compute Device
+                        RowLayout {
+                            visible: Config.draftDepthEffectEnabled && root.fuzzyMatch(searchField.text, "Compute device")
+                            Layout.fillWidth: true
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+                                Text { text: "Compute Device"; color: Theme.onPrimaryContainerColor; font.pixelSize: 15; font.weight: Font.Medium }
+                                Text { text: "Select execution provider for neural depth estimation."; color: Theme.onPrimaryContainerColor; opacity: 0.6; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                            }
+
+                            StyledComboBox {
+                                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                model: DepthService.gpuInstalled ? ["cpu", "auto", "gpu"] : ["cpu"]
+                                currentIndex: Math.max(0, model.indexOf(Config.draftDepthDevice))
+                                onActivated: Config.draftDepthDevice = model[currentIndex]
+                            }
+                        }
+
+                        // Child Setting 3: Generate automatically
+                        RowLayout {
+                            visible: Config.draftDepthEffectEnabled && root.fuzzyMatch(searchField.text, "Generate automatically")
+                            Layout.fillWidth: true
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+                                Text { text: "Generate automatically"; color: Theme.onPrimaryContainerColor; font.pixelSize: 15; font.weight: Font.Medium }
+                                Text { text: "Automatically generate mask when wallpaper or parameters change."; color: Theme.onPrimaryContainerColor; opacity: 0.6; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                            }
+
+                            PillSwitch {
+                                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                checked: Config.draftDepthAutoGenerate
+                                onToggled: (value) => Config.draftDepthAutoGenerate = value
+                            }
+                        }
+
+                        // Child Setting 4: Pre-generate for all wallpapers
+                        RowLayout {
+                            visible: Config.draftDepthEffectEnabled && root.fuzzyMatch(searchField.text, "Pre-generate")
+                            Layout.fillWidth: true
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+                                Text { text: "Pre-generate wallpapers"; color: Theme.onPrimaryContainerColor; font.pixelSize: 15; font.weight: Font.Medium }
+                                Text {
+                                    text: DepthService.queueProgress !== ""
+                                        ? DepthService.queueProgress
+                                        : "Pre-generate masks in the background so wallpaper switches are instant."
+                                    color: DepthService.queueProgress !== "" ? Theme.primary : Theme.onPrimaryContainerColor
+                                    opacity: DepthService.queueProgress !== "" ? 1.0 : 0.6
+                                    font.pixelSize: 12
+                                    font.weight: DepthService.queueProgress !== "" ? Font.Medium : Font.Normal
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                }
+                            }
+
+                            PillSwitch {
+                                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                checked: Config.draftDepthPregenerate
+                                onToggled: (value) => Config.draftDepthPregenerate = value
+                            }
+                        }
+
+                        // Child Setting 5: Foreground threshold
+                        RowLayout {
+                            visible: Config.draftDepthEffectEnabled && root.fuzzyMatch(searchField.text, "Foreground threshold")
+                            Layout.fillWidth: true
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+                                Text { text: "Foreground Threshold (" + Config.draftDepthThreshold + "%)"; color: Theme.onPrimaryContainerColor; font.pixelSize: 15; font.weight: Font.Medium }
+                                Text { text: "Lower threshold = more of the scene in front of widgets."; color: Theme.onPrimaryContainerColor; opacity: 0.6; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                            }
+
+                            Slider {
+                                Layout.preferredWidth: 150
+                                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                from: 0
+                                to: 100
+                                stepSize: 1
+                                value: Config.draftDepthThreshold
+                                onValueChanged: Config.draftDepthThreshold = Math.round(value)
+                            }
+                        }
+
+                        // Child Setting 6: Edge feather
+                        RowLayout {
+                            visible: Config.draftDepthEffectEnabled && root.fuzzyMatch(searchField.text, "Edge feather")
+                            Layout.fillWidth: true
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+                                Text { text: "Edge Feather (" + Config.draftDepthFeather + ")"; color: Theme.onPrimaryContainerColor; font.pixelSize: 15; font.weight: Font.Medium }
+                                Text { text: "Transition smoothness between foreground and background (0-50)."; color: Theme.onPrimaryContainerColor; opacity: 0.6; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                            }
+
+                            Slider {
+                                Layout.preferredWidth: 150
+                                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                from: 0
+                                to: 50
+                                stepSize: 1
+                                value: Config.draftDepthFeather
+                                onValueChanged: Config.draftDepthFeather = Math.round(value)
+                            }
+                        }
+
+                        // Child Setting 7: Actions: Generate now & Clear cache
+                        RowLayout {
+                            visible: Config.draftDepthEffectEnabled && root.fuzzyMatch(searchField.text, "Generate now Clear cache")
+                            Layout.fillWidth: true
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+                                Text { text: "Depth Actions"; color: Theme.onPrimaryContainerColor; font.pixelSize: 15; font.weight: Font.Medium }
+                                Text { text: "Manually generate mask for current wallpaper or clear cached files."; color: Theme.onPrimaryContainerColor; opacity: 0.6; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                            }
+
+                            Row {
+                                spacing: 8
+                                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+
+                                Button {
+                                    text: "Generate now"
+                                    enabled: DepthService.installed && !DepthService.busy
+                                    onClicked: DepthService.generateForCurrentWallpaper()
+                                    contentItem: Text {
+                                        text: parent.text; color: Theme.onPrimaryContainerColor; font.pixelSize: 12; font.weight: Font.Medium
+                                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                                    }
+                                    background: Rectangle {
+                                        implicitHeight: 30; implicitWidth: 105
+                                        color: parent.down ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.35) :
+                                               (parent.hovered ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.25) : Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.12))
+                                        radius: 15; border.width: 1; border.color: Theme.primary
+                                    }
+                                }
+
+                                Button {
+                                    text: "Clear cache"
+                                    enabled: !DepthService.busy
+                                    onClicked: DepthService.clearCache()
+                                    contentItem: Text {
+                                        text: parent.text; color: Theme.onPrimaryContainerColor; font.pixelSize: 12; font.weight: Font.Medium
+                                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                                    }
+                                    background: Rectangle {
+                                        implicitHeight: 30; implicitWidth: 95
+                                        color: parent.down ? Qt.rgba(Theme.error.r, Theme.error.g, Theme.error.b, 0.35) :
+                                               (parent.hovered ? Qt.rgba(Theme.error.r, Theme.error.g, Theme.error.b, 0.2) : "transparent")
+                                        radius: 15; border.width: 1; border.color: Theme.outlineVariant
+                                    }
+                                }
                             }
                         }
                         

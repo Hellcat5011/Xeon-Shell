@@ -7,6 +7,7 @@ Item {
     id: root
 
     property bool interactive: true
+    property bool transparentBg: false
 
     readonly property real defaultWidth: 360
     readonly property real defaultHeight: 180
@@ -20,7 +21,9 @@ Item {
         onTriggered: root.currentDate = new Date()
     }
 
-    DesktopWidgetBackground {}
+    DesktopWidgetBackground {
+        transparentBg: root.transparentBg
+    }
 
     ColumnLayout {
         id: content

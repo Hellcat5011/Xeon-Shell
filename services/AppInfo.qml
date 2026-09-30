@@ -1,6 +1,8 @@
 pragma Singleton
 import QtQuick
 import QtCore
+import Quickshell
+import Quickshell.Widgets
 
 QtObject {
     // The shell's identity. Kept for display, debug logging, and any
@@ -30,5 +32,38 @@ QtObject {
         // load-bearing.
         Qt.application.name = "xeon-shell"
         Qt.application.organization = "Xeon Shell"
+    }
+
+    function getAppIcon(appClass: string): string {
+        if (!appClass || appClass.length === 0) return "application-x-executable";
+        let lower = appClass.toLowerCase();
+        for (let app of DesktopEntries.applications.values) {
+            if (!app.id) continue;
+            let appId = app.id.toLowerCase();
+            if (appId === lower || appId === lower + ".desktop") {
+                return app.icon || appClass;
+            }
+        }
+        for (let app of DesktopEntries.applications.values) {
+            if (!app.id) continue;
+            let appId = app.id.toLowerCase();
+            if (appId.replace(".desktop", "").endsWith(lower)) {
+                return app.icon || appClass;
+            }
+        }
+        return appClass;
+    }
+
+    function getAppName(appClass: string): string {
+        if (!appClass || appClass.length === 0) return "";
+        let lower = appClass.toLowerCase();
+        for (let app of DesktopEntries.applications.values) {
+            if (!app.id) continue;
+            let appId = app.id.toLowerCase();
+            if (appId === lower || appId === lower + ".desktop") {
+                return app.name || appClass;
+            }
+        }
+        return appClass;
     }
 }

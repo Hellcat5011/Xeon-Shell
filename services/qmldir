@@ -5,4 +5,6 @@ singleton SystemMonitor 1.0 SystemMonitor.qml
 singleton AppInfo 1.0 AppInfo.qml
 singleton MprisService 1.0 MprisService.qml
 singleton DesktopLayout 1.0 DesktopLayout.qml
+singleton HyprlandService 1.0 HyprlandService.qml
+singleton DepthService 1.0 DepthService.qml
 BlueLightFilter 1.0 BlueLightFilter.qml

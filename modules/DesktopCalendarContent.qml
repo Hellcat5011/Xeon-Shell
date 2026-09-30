@@ -8,6 +8,7 @@ Item {
     id: root
 
     property bool interactive: true
+    property bool transparentBg: false
 
     readonly property real defaultWidth: 360
     readonly property real defaultHeight: 320
@@ -16,7 +17,9 @@ Item {
     property var selectedDate: new Date()
     property string viewMode: "days" // "days", "months", "years"
 
-    DesktopWidgetBackground {}
+    DesktopWidgetBackground {
+        transparentBg: root.transparentBg
+    }
 
     Item {
         anchors.fill: parent

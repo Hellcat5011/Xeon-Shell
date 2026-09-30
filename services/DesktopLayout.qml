@@ -59,6 +59,7 @@ Item {
                     w: 400,
                     h: 170,
                     visible: true,
+                    transparentBg: false,
                     isStored: false
                 };
             case "tray": {
@@ -69,6 +70,7 @@ Item {
                     w: w,
                     h: 50,
                     visible: true,
+                    transparentBg: false,
                     isStored: false
                 };
             }
@@ -80,6 +82,7 @@ Item {
                     w: 360,
                     h: h,
                     visible: true,
+                    transparentBg: false,
                     isStored: false
                 };
             }
@@ -90,10 +93,11 @@ Item {
                     w: 360,
                     h: 320,
                     visible: true,
+                    transparentBg: false,
                     isStored: false
                 };
             default:
-                return { x: 0, y: 0, w: 100, h: 100, visible: true, isStored: false };
+                return { x: 0, y: 0, w: 100, h: 100, visible: true, transparentBg: false, isStored: false };
         }
     }
 
@@ -118,6 +122,7 @@ Item {
                 w: w,
                 h: h,
                 visible: item.visible !== false,
+                transparentBg: item.transparentBg === true,
                 isStored: true
             };
         }
@@ -137,28 +142,32 @@ Item {
                 y: 30 / sh,
                 w: 400 / sw,
                 h: 170 / sh,
-                visible: true
+                visible: true,
+                transparentBg: false
             },
             "tray": {
                 x: (sw - 30 - trayW) / sw,
                 y: 210 / sh,
                 w: trayW / sw,
                 h: 50 / sh,
-                visible: true
+                visible: true,
+                transparentBg: false
             },
             "clock": {
                 x: (sw - 390) / sw,
                 y: (sh - 380 - clockH) / sh,
                 w: 360 / sw,
                 h: clockH / sh,
-                visible: true
+                visible: true,
+                transparentBg: false
             },
             "calendar": {
                 x: (sw - 390) / sw,
                 y: (sh - 350) / sh,
                 w: 360 / sw,
                 h: 320 / sh,
-                visible: true
+                visible: true,
+                transparentBg: false
             }
         };
     }

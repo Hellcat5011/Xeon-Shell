@@ -18,6 +18,7 @@
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import QtQml
 import "modules" as Modules
 import "services"
@@ -100,6 +101,26 @@ ShellRoot {
 
     Modules.KeybindViewer {
         id: keybindViewer
+    }
+
+    Modules.WorkspaceOverview {
+        id: workspaceOverview
+        blocked: desktopEditMode.active || (lockscreen.fade > 0)
+        onShownChanged: {
+            if (shown && (tabSwitcher.active || tabSwitcher.shown)) {
+                tabSwitcher.cancel();
+            }
+        }
+    }
+
+    Modules.TabSwitcher {
+        id: tabSwitcher
+        blocked: desktopEditMode.active || (lockscreen.fade > 0)
+        onActiveChanged: {
+            if (active && workspaceOverview.shown) {
+                workspaceOverview.hide();
+            }
+        }
     }
 
     Modules.Lockscreen {
@@ -273,6 +294,56 @@ ShellRoot {
         function close(): void { keybindViewer.hide() }
     }
 
+    GlobalShortcut {
+        appid: "quickshell"
+        name: "overviewToggle"
+        description: "Toggle workspace overview"
+        onPressed: workspaceOverview.toggle()
+    }
+
+    GlobalShortcut {
+        appid: "quickshell"
+        name: "switcherNext"
+        description: "Alt+Tab switcher next window"
+        onPressed: tabSwitcher.next()
+    }
+
+    GlobalShortcut {
+        appid: "quickshell"
+        name: "switcherPrev"
+        description: "Alt+Tab switcher previous window"
+        onPressed: tabSwitcher.prev()
+    }
+
+    GlobalShortcut {
+        appid: "quickshell"
+        name: "switcherCommit"
+        description: "Alt+Tab switcher commit selection"
+        onPressed: tabSwitcher.commit()
+    }
+
+    GlobalShortcut {
+        appid: "quickshell"
+        name: "switcherCancel"
+        description: "Alt+Tab switcher cancel"
+        onPressed: tabSwitcher.cancel()
+    }
+
+    IpcHandler {
+        target: "overview"
+        function toggle(): void { workspaceOverview.toggle() }
+        function open(): void { workspaceOverview.show() }
+        function close(): void { workspaceOverview.hide() }
+    }
+
+    IpcHandler {
+        target: "switcher"
+        function next(): void { tabSwitcher.next() }
+        function prev(): void { tabSwitcher.prev() }
+        function commit(): void { tabSwitcher.commit() }
+        function cancel(): void { tabSwitcher.cancel() }
+    }
+
     IpcHandler {
         target: "lock"
         function lock(): void { lockscreen.lock() }
@@ -348,6 +419,31 @@ ShellRoot {
     }
 
     IpcHandler {
+        target: "depth"
+        function status(): string {
+            return JSON.stringify({
+                installed: DepthService.installed,
+                gpuInstalled: DepthService.gpuInstalled,
+                hasNvidiaGpu: DepthService.hasNvidiaGpu,
+                busy: DepthService.busy,
+                statusText: DepthService.statusText,
+                activeDevice: DepthService.activeDevice,
+                queueProgress: DepthService.queueProgress,
+                currentWallpaper: DepthService.currentWallpaper,
+                maskUrl: DepthService.maskUrl.toString(),
+                maskVisible: DepthService.maskVisible,
+                cacheSize: DepthService.cacheSizeFormatted
+            });
+        }
+        function generate(): void {
+            DepthService.generateForCurrentWallpaper();
+        }
+        function clear(): void {
+            DepthService.clearCache();
+        }
+    }
+
+    IpcHandler {
         target: "help"
         function display(): string {
             return `
@@ -416,12 +512,28 @@ Available Targets and Methods:
     open()    - Open the keybind viewer
     close()   - Close the keybind viewer
 
+  overview
+    toggle()  - Toggle the workspace overview
+    open()    - Open the workspace overview
+    close()   - Close the workspace overview
+
+  switcher
+    next()    - Select next window in Alt+Tab switcher
+    prev()    - Select previous window in Alt+Tab switcher
+    commit()  - Commit selection and focus window
+    cancel()  - Cancel switcher without changing focus
+
   lock
     lock()    - Lock the session
     unlock()  - Force unlock (testing/recovery only)
 
   bluelight
     toggle()  - Toggle the blue light filter
+
+  depth
+    status()   - Show current depth service status and cache info
+    generate() - Generate depth mask for current wallpaper
+    clear()    - Clear depth maps and mask cache
 
   help
     display()    - Show this help message

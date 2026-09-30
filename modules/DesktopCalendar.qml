@@ -28,8 +28,17 @@ PanelWindow {
     implicitHeight: Math.round(root.geom.h)
     visible: root.geom.visible
 
-    DesktopCalendarContent {
+    DepthMask {
         anchors.fill: parent
-        interactive: true
+        screenX: Math.round(root.geom.x)
+        screenY: Math.round(root.geom.y)
+        screenWidth: root.screen ? root.screen.width : DesktopLayout.screenWidth
+        screenHeight: root.screen ? root.screen.height : DesktopLayout.screenHeight
+
+        DesktopCalendarContent {
+            anchors.fill: parent
+            interactive: true
+            transparentBg: root.geom.transparentBg
+        }
     }
 }
