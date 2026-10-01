@@ -1,14 +1,14 @@
 #!/bin/bash
 # gen-wallpaper-thumbs.sh — generate cached thumbnails for the wallpaper selector.
 # Outputs "original_path|thumb_path" lines for each wallpaper found.
-# Thumbnails are cached in ~/.cache/xeon-shell/thumbs/ and regenerated
+# Thumbnails are cached in ~/.cache/Xeon Shell/thumbs/ and regenerated
 # only when the source image is newer than the cached thumbnail.
 # Orphaned thumbnails (from deleted source images) are cleaned up automatically.
 set -euo pipefail
 
 WALLPAPER_DIR="${1:?usage: gen-wallpaper-thumbs.sh <wallpaper_dir>}"
 
-CACHE_DIR="$HOME/.cache/xeon-shell/thumbs"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/Xeon Shell/thumbs"
 mkdir -p "$CACHE_DIR"
 
 # Resolution-adaptive thumbnail width (~35% of primary monitor)

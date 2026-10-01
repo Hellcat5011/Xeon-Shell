@@ -21,7 +21,7 @@ Item {
         id: contentWrapper
         anchors.fill: parent
         visible: !root.isMaskActive
-        layer.enabled: root.isMaskActive
+        layer.enabled: true
     }
 
     // 2. Offscreen mask source item
@@ -29,7 +29,7 @@ Item {
         id: maskSourceItem
         anchors.fill: parent
         visible: false
-        layer.enabled: root.isMaskActive
+        layer.enabled: true
 
         Image {
             x: -root.screenX
@@ -40,8 +40,9 @@ Item {
             source: DepthService.maskUrl
             sourceSize.width: root.screenWidth
             sourceSize.height: root.screenHeight
-            asynchronous: true
+            asynchronous: false
             cache: true
+            opacity: DepthService.maskFade
         }
     }
 
@@ -54,6 +55,7 @@ Item {
         maskEnabled: true
         maskSource: maskSourceItem
         maskInverted: true
-        opacity: DepthService.maskFade
+        opacity: 1.0
     }
 }
+

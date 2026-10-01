@@ -70,6 +70,9 @@ Item {
                                     if (root.enabled && root.currentWallpaper && root.currentMaskPath === "") {
                                         root.generateForCurrentWallpaper();
                                     }
+                                    if (root.enabled && !watchProcess.running) {
+                                        root.startWatcher();
+                                    }
                                 } else {
                                     root.activeDevice = "Not installed";
                                 }
@@ -138,6 +141,9 @@ Item {
                 outBuf = "";
             } else {
                 root.busy = false;
+                if (Config.depthPregenerate && root.enabled && root.installed && !pregenProcess.running) {
+                    root.startPregeneration();
+                }
             }
         }
 
@@ -204,6 +210,48 @@ Item {
         }
     }
 
+    // 6. Background inotify folder watcher process
+    Process {
+        id: watchProcess
+        property string outBuf: ""
+
+        onRunningChanged: {
+            if (!running && root.enabled && root.installed) {
+                restartWatchTimer.start();
+            }
+        }
+
+        stdout: SplitParser {
+            onRead: data => {
+                let lines = data.trim().split("\n");
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i].trim();
+                    if (!line.startsWith("{")) continue;
+                    try {
+                        let obj = JSON.parse(line);
+                        if (obj.status === "watched_generate") {
+                            root.refreshStatus();
+                            if (obj.wallpaper === root.currentWallpaper && root.enabled) {
+                                root.generateForCurrentWallpaper();
+                            }
+                        }
+                    } catch (e) {}
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: restartWatchTimer
+        interval: 2000
+        repeat: false
+        onTriggered: {
+            if (root.enabled && root.installed && !watchProcess.running) {
+                root.startWatcher();
+            }
+        }
+    }
+
     // Transition delay timer:
     // Ensures a cache-hit mask does not appear until the daemon's transition completes
     Timer {
@@ -247,6 +295,7 @@ Item {
         // Called by WallpaperSelector.applyWallpaper BEFORE set-wallpaper.sh is launched
         root.applyStartTime = Date.now();
         root.targetWallpaperPath = path;
+        root.currentWallpaper = path;
 
         // Immediately fade out the old mask as it belongs to the previous wallpaper
         root.maskFade = 0.0;
@@ -328,8 +377,9 @@ Item {
             if (running) {
                 result = "";
             } else if (result.length > 0 && !result.endsWith(".wa.jpg")) {
+                let changed = (result !== root.currentWallpaper);
                 root.currentWallpaper = result;
-                if (root.enabled && root.installed) {
+                if (root.enabled && root.installed && (changed || root.currentMaskPath === "")) {
                     root.wallpaperApplying(root.currentWallpaper);
                 }
             } else {
@@ -347,8 +397,9 @@ Item {
             if (running) {
                 result = "";
             } else if (result.length > 0 && !result.endsWith(".wa.jpg")) {
+                let changed = (result !== root.currentWallpaper);
                 root.currentWallpaper = result;
-                if (root.enabled && root.installed) {
+                if (root.enabled && root.installed && (changed || root.currentMaskPath === "")) {
                     root.wallpaperApplying(root.currentWallpaper);
                 }
             }
@@ -389,6 +440,33 @@ Item {
         pregenProcess.running = true;
     }
 
+    function startWatcher() {
+        if (!root.enabled || !root.installed) return;
+        if (watchProcess.running) {
+            watchProcess.running = false;
+        }
+
+        let wpDir = Config.wallpaperDir.startsWith("~") ? (Quickshell.env("HOME") + Config.wallpaperDir.slice(1)) : Config.wallpaperDir;
+
+        watchProcess.command = [
+            "nice", "-n", "19",
+            "ionice", "-c3",
+            "python3", Quickshell.shellDir + "/scripts/wallpaper-depth.py",
+            "watch", wpDir,
+            "--threshold", Config.depthThreshold.toString(),
+            "--feather", Config.depthFeather.toString(),
+            "--device", Config.depthDevice
+        ];
+        watchProcess.running = true;
+    }
+
+    function stopWatcher() {
+        restartWatchTimer.stop();
+        if (watchProcess.running) {
+            watchProcess.running = false;
+        }
+    }
+
     // ── Watchers & Triggers ──
 
     onEnabledChanged: {
@@ -396,9 +474,14 @@ Item {
             root.refreshStatus();
             if (root.installed) {
                 root.generateForCurrentWallpaper();
+                root.startWatcher();
+                if (Config.depthPregenerate && !pregenProcess.running && !generateProcess.running) {
+                    root.startPregeneration();
+                }
             }
         } else {
             // Feature disabled: zero overhead, no processes, no masks
+            root.stopWatcher();
             if (pregenProcess.running) pregenProcess.running = false;
             if (generateProcess.running) generateProcess.running = false;
             transitionTimer.stop();
@@ -411,8 +494,14 @@ Item {
     }
 
     onInstalledChanged: {
-        if (root.installed && root.enabled && root.currentWallpaper && root.currentMaskPath === "") {
-            root.generateForCurrentWallpaper();
+        if (root.installed && root.enabled) {
+            if (root.currentWallpaper && root.currentMaskPath === "") {
+                root.generateForCurrentWallpaper();
+            }
+            root.startWatcher();
+            if (Config.depthPregenerate && !pregenProcess.running && !generateProcess.running) {
+                root.startPregeneration();
+            }
         }
     }
 
@@ -425,20 +514,34 @@ Item {
     // When parameters change and autoGenerate is on:
     Connections {
         target: Config
+        function onWallpaperDirChanged() {
+            if (root.enabled && root.installed) {
+                root.startWatcher();
+            }
+        }
         function onDepthThresholdChanged() {
             if (root.enabled && root.installed && Config.depthAutoGenerate && root.currentWallpaper) {
                 root.wallpaperApplying(root.currentWallpaper);
+            }
+            if (root.enabled && root.installed) {
+                root.startWatcher();
             }
         }
         function onDepthFeatherChanged() {
             if (root.enabled && root.installed && Config.depthAutoGenerate && root.currentWallpaper) {
                 root.wallpaperApplying(root.currentWallpaper);
             }
+            if (root.enabled && root.installed) {
+                root.startWatcher();
+            }
         }
         function onDepthDeviceChanged() {
             if (root.installed) {
                 root.activeDevice = (Config.depthDevice === "gpu" && root.gpuInstalled) ? "NVIDIA GPU (CUDA)" :
                                     (Config.depthDevice === "auto" && root.gpuInstalled ? "NVIDIA GPU (CUDA)" : "CPU");
+            }
+            if (root.enabled && root.installed) {
+                root.startWatcher();
             }
         }
         function onDepthPregenerateChanged() {

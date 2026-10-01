@@ -29,6 +29,7 @@ PanelWindow {
     visible: root.geom.visible
 
     DepthMask {
+        id: depthMask
         anchors.fill: parent
         enabled: root.geom.sendToBackground === true
         screenX: Math.round(root.geom.x)

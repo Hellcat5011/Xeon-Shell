@@ -432,6 +432,7 @@ ShellRoot {
                 currentWallpaper: DepthService.currentWallpaper,
                 maskUrl: DepthService.maskUrl.toString(),
                 maskVisible: DepthService.maskVisible,
+                maskFade: DepthService.maskFade,
                 cacheSize: DepthService.cacheSizeFormatted
             });
         }

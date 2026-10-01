@@ -13,7 +13,10 @@ import glob
 import hashlib
 import json
 import os
+import select
 import shutil
+import signal
+import struct
 import subprocess
 import sys
 import time
@@ -30,7 +33,7 @@ XDG_DATA_HOME = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/
 XDG_CACHE_HOME = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
 
 DATA_DIR = os.path.join(XDG_DATA_HOME, "xeon-shell", "wallpaper-depth")
-CACHE_DIR = os.path.join(XDG_CACHE_HOME, "xeon-shell", "wallpaper-depth")
+CACHE_DIR = os.path.join(XDG_CACHE_HOME, "Xeon Shell", "wallpaper-depth")
 MODEL_DIR = os.path.join(DATA_DIR, "models")
 MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILENAME)
 VENV_DIR = os.path.join(DATA_DIR, "venv")
@@ -297,9 +300,11 @@ def prune_cache(wallpaper_dir=None):
                 if os.path.isfile(fpath):
                     # compute first 64KB hash or full hash
                     try:
+                        hasher = hashlib.sha256()
                         with open(fpath, "rb") as f:
-                            h = hashlib.sha256(f.read()).hexdigest()[:16]
-                            keep_hashes.add(h)
+                            while chunk := f.read(65536):
+                                hasher.update(chunk)
+                        keep_hashes.add(hasher.hexdigest()[:16])
                     except Exception:
                         pass
         except Exception:
@@ -394,9 +399,11 @@ def run_generate(wallpaper_path, threshold=30, feather=8, device="cpu", wallpape
 
     # Check file size & readability
     try:
+        hasher = hashlib.sha256()
         with open(wallpaper_path, "rb") as f:
-            content = f.read()
-            wallpaper_hash = hashlib.sha256(content).hexdigest()[:16]
+            while chunk := f.read(65536):
+                hasher.update(chunk)
+        wallpaper_hash = hasher.hexdigest()[:16]
     except Exception as e:
         emit_error(f"Cannot read wallpaper file {wallpaper_path}: {e}")
         return False
@@ -422,126 +429,148 @@ def run_generate(wallpaper_path, threshold=30, feather=8, device="cpu", wallpape
         })
         return True
 
-    # Need venv libraries
-    try:
-        import numpy as np
-        from PIL import Image, ImageOps
-        import onnxruntime as ort
-    except ImportError:
-        emit_error("Required libraries (numpy, PIL, onnxruntime) not found. Please install first.")
-        return False
-
-    # Open image
-    try:
-        raw_img = Image.open(wallpaper_path)
-        raw_img = ImageOps.exif_transpose(raw_img).convert("RGB")
-        orig_w, orig_h = raw_img.size
-    except Exception as e:
-        emit_error(f"Unreadable or unsupported image format {wallpaper_path}: {e}")
-        return False
-
-    # Resolution cap: max output long edge = 2560 px
-    max_edge = min(max(orig_w, orig_h), 2560)
-    cap_scale = max_edge / max(orig_w, orig_h)
-    target_w = max(16, int(round(orig_w * cap_scale)))
-    target_h = max(16, int(round(orig_h * cap_scale)))
-
-    active_provider = "CPU"
-
-    # 2. Check depth map cache
-    if os.path.isfile(depth_cache_file):
+    # Acquire lock for model inference and mask generation
+    lock_file_path = os.path.join(CACHE_DIR, "generate.lock")
+    with open(lock_file_path, "w") as lock_file:
         try:
-            depth = np.load(depth_cache_file)
-            cache_hit_type = "depth"
-            active_provider = "cached_depth"
-        except Exception:
-            depth = None
-            cache_hit_type = False
-    else:
-        depth = None
-        cache_hit_type = False
+            fcntl.flock(lock_file, fcntl.LOCK_EX)
+            # Re-check cache in case another process finished generating this exact file while waiting
+            if os.path.isfile(mask_cache_file) and os.path.getsize(mask_cache_file) > 0:
+                try:
+                    os.utime(mask_cache_file, None)
+                except OSError:
+                    pass
+                emit_json({
+                    "status": "ready",
+                    "wallpaper": wallpaper_path,
+                    "mask": mask_cache_file,
+                    "cacheHit": True,
+                    "activeProvider": "cached"
+                })
+                return True
 
-    # 3. Model Inference (if depth map not cached)
-    if depth is None:
-        if not os.path.isfile(MODEL_PATH):
-            emit_error("Depth Anything V2 ONNX model not found. Please click Install in Settings.")
-            return False
-
-        # Input preprocessing: resize aspect-preserving to multiple of 14, max 518
-        max_model_size = 518
-        scale = max_model_size / max(orig_w, orig_h)
-        new_w = max(14, int(round(orig_w * scale / 14.0)) * 14)
-        new_h = max(14, int(round(orig_h * scale / 14.0)) * 14)
-        resized = raw_img.resize((new_w, new_h), Image.Resampling.BILINEAR)
-
-        img_np = np.array(resized, dtype=np.float32) / 255.0
-        mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
-        std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
-        norm_img = (img_np - mean) / std
-        input_tensor = np.transpose(norm_img, (2, 0, 1))[np.newaxis, ...]
-
-        # Provider selection
-        providers = []
-        if device == "gpu":
-            providers = ["CUDAExecutionProvider"]
-        elif device == "auto":
-            providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
-        else:
-            providers = ["CPUExecutionProvider"]
-
-        try:
-            session = ort.InferenceSession(MODEL_PATH, providers=providers)
-            actual_providers = session.get_providers()
-            active_provider = actual_providers[0] if actual_providers else "CPU"
-            if device == "gpu" and "CUDAExecutionProvider" not in actual_providers:
-                emit_error("CUDA Execution Provider requested but unavailable.")
+            # Need venv libraries
+            try:
+                import numpy as np
+                from PIL import Image, ImageOps
+                import onnxruntime as ort # type: ignore
+            except ImportError:
+                emit_error("Required libraries (numpy, PIL, onnxruntime) not found. Please install first.")
                 return False
-        except Exception as e:
-            if device == "auto":
-                # Fallback to CPU
-                session = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
-                active_provider = "CPUExecutionProvider (CUDA fallback: " + str(e) + ")"
+
+            # Open image
+            try:
+                raw_img = Image.open(wallpaper_path)
+                raw_img = ImageOps.exif_transpose(raw_img).convert("RGB")
+                orig_w, orig_h = raw_img.size
+            except Exception as e:
+                emit_error(f"Unreadable or unsupported image format {wallpaper_path}: {e}")
+                return False
+
+            # Resolution cap: max output long edge = 2560 px
+            max_edge = min(max(orig_w, orig_h), 2560)
+            cap_scale = max_edge / max(orig_w, orig_h)
+            target_w = max(16, int(round(orig_w * cap_scale)))
+            target_h = max(16, int(round(orig_h * cap_scale)))
+
+            active_provider = "CPU"
+
+            # 2. Check depth map cache
+            if os.path.isfile(depth_cache_file):
+                try:
+                    depth = np.load(depth_cache_file)
+                    cache_hit_type = "depth"
+                    active_provider = "cached_depth"
+                except Exception:
+                    depth = None
+                    cache_hit_type = False
             else:
-                emit_error(f"Failed to initialize ONNX session with {device}: {e}")
+                depth = None
+                cache_hit_type = False
+
+            # 3. Model Inference (if depth map not cached)
+            if depth is None:
+                if not os.path.isfile(MODEL_PATH):
+                    emit_error("Depth Anything V2 ONNX model not found. Please click Install in Settings.")
+                    return False
+
+                # Input preprocessing: resize aspect-preserving to multiple of 14, max 518
+                max_model_size = 518
+                scale = max_model_size / max(orig_w, orig_h)
+                new_w = max(14, int(round(orig_w * scale / 14.0)) * 14)
+                new_h = max(14, int(round(orig_w * scale / 14.0)) * 14)
+                resized = raw_img.resize((new_w, new_h), Image.Resampling.BILINEAR)
+
+                img_np = np.array(resized, dtype=np.float32) / 255.0
+                mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+                std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+                norm_img = (img_np - mean) / std
+                input_tensor = np.transpose(norm_img, (2, 0, 1))[np.newaxis, ...]
+
+                # Provider selection
+                providers = []
+                if device == "gpu":
+                    providers = ["CUDAExecutionProvider"]
+                elif device == "auto":
+                    providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+                else:
+                    providers = ["CPUExecutionProvider"]
+
+                try:
+                    session = ort.InferenceSession(MODEL_PATH, providers=providers)
+                    actual_providers = session.get_providers()
+                    active_provider = actual_providers[0] if actual_providers else "CPU"
+                    if device == "gpu" and "CUDAExecutionProvider" not in actual_providers:
+                        emit_error("CUDA Execution Provider requested but unavailable.")
+                        return False
+                except Exception as e:
+                    if device == "auto":
+                        # Fallback to CPU
+                        session = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
+                        active_provider = "CPUExecutionProvider (CUDA fallback: " + str(e) + ")"
+                    else:
+                        emit_error(f"Failed to initialize ONNX session with {device}: {e}")
+                        return False
+
+                # Run inference
+                try:
+                    outputs = session.run(["predicted_depth"], {"pixel_values": input_tensor})
+                    raw_depth = outputs[0][0]  # shape (H, W)
+                    # Normalize to 0..1 (higher = nearer)
+                    d_min = float(raw_depth.min())
+                    d_max = float(raw_depth.max())
+                    depth = ((raw_depth - d_min) / (d_max - d_min + 1e-8)).astype(np.float32)
+
+                    # Save depth map cache atomically
+                    tmp_depth = depth_cache_file + ".tmp.npy"
+                    np.save(tmp_depth, depth)
+                    os.replace(tmp_depth, depth_cache_file)
+                except Exception as e:
+                    emit_error(f"Inference failed: {e}")
+                    return False
+
+            # 4. Generate and save alpha mask PNG
+            try:
+                mask_img = smoothstep_mask(depth, threshold, feather, target_w, target_h)
+                tmp_mask = mask_cache_file + ".tmp.png"
+                mask_img.save(tmp_mask, "PNG", compress_level=1)
+                os.replace(tmp_mask, mask_cache_file)
+            except Exception as e:
+                emit_error(f"Failed to save mask: {e}")
                 return False
 
-        # Run inference
-        try:
-            outputs = session.run(["predicted_depth"], {"pixel_values": input_tensor})
-            raw_depth = outputs[0][0]  # shape (H, W)
-            # Normalize to 0..1 (higher = nearer)
-            d_min = float(raw_depth.min())
-            d_max = float(raw_depth.max())
-            depth = ((raw_depth - d_min) / (d_max - d_min + 1e-8)).astype(np.float32)
+            prune_cache(wallpaper_dir)
 
-            # Save depth map cache atomically
-            tmp_depth = depth_cache_file + ".tmp.npy"
-            np.save(tmp_depth, depth)
-            os.replace(tmp_depth, depth_cache_file)
-        except Exception as e:
-            emit_error(f"Inference failed: {e}")
-            return False
-
-    # 4. Generate and save alpha mask PNG
-    try:
-        mask_img = smoothstep_mask(depth, threshold, feather, target_w, target_h)
-        tmp_mask = mask_cache_file + ".tmp.png"
-        mask_img.save(tmp_mask, "PNG", compress_level=1)
-        os.replace(tmp_mask, mask_cache_file)
-    except Exception as e:
-        emit_error(f"Failed to save mask: {e}")
-        return False
-
-    prune_cache(wallpaper_dir)
-
-    emit_json({
-        "status": "ready",
-        "wallpaper": wallpaper_path,
-        "mask": mask_cache_file,
-        "cacheHit": cache_hit_type,
-        "activeProvider": active_provider
-    })
-    return True
+            emit_json({
+                "status": "ready",
+                "wallpaper": wallpaper_path,
+                "mask": mask_cache_file,
+                "cacheHit": cache_hit_type,
+                "activeProvider": active_provider
+            })
+            return True
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
 
 
 def run_pregenerate(wallpaper_dir, threshold=30, feather=8, device="cpu"):
@@ -587,6 +616,138 @@ def run_pregenerate(wallpaper_dir, threshold=30, feather=8, device="cpu"):
     return True
 
 
+def run_watch(wallpaper_dir, threshold=30, feather=8, device="cpu"):
+    """Monitor wallpaper_dir with inotify for IN_CLOSE_WRITE and IN_MOVED_TO events and generate masks on the fly."""
+    wallpaper_dir = os.path.expanduser(wallpaper_dir)
+    if not os.path.isdir(wallpaper_dir):
+        emit_error(f"Wallpaper directory not found: {wallpaper_dir}")
+        return False
+
+    libc = ctypes.CDLL(None, use_errno=True)
+    try:
+        inotify_init1 = libc.inotify_init1
+        inotify_init1.argtypes = [ctypes.c_int]
+        inotify_init1.restype = ctypes.c_int
+        fd = inotify_init1(os.O_NONBLOCK | os.O_CLOEXEC)
+    except AttributeError:
+        inotify_init = libc.inotify_init
+        inotify_init.argtypes = []
+        inotify_init.restype = ctypes.c_int
+        fd = inotify_init()
+
+    if fd < 0:
+        errno = ctypes.get_errno()
+        emit_error(f"Failed to initialize inotify (errno {errno})")
+        return False
+
+    inotify_add_watch = libc.inotify_add_watch
+    inotify_add_watch.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_uint32]
+    inotify_add_watch.restype = ctypes.c_int
+
+    IN_CLOSE_WRITE = 0x00000008
+    IN_MOVED_TO = 0x00000080
+    IN_CREATE = 0x00000100
+    IN_ISDIR = 0x40000000
+
+    mask = IN_CLOSE_WRITE | IN_MOVED_TO | IN_CREATE
+
+    watch_descriptors = {}
+
+    def add_watch_recursive(path):
+        for root, dirs, _ in os.walk(path):
+            wd = inotify_add_watch(fd, root.encode("utf-8"), mask)
+            if wd >= 0:
+                watch_descriptors[wd] = root
+
+    add_watch_recursive(wallpaper_dir)
+    if not watch_descriptors:
+        os.close(fd)
+        emit_error(f"Failed to add inotify watch on {wallpaper_dir}")
+        return False
+
+    extensions = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff", ".avif", ".heic", ".heif")
+    emit_json({"status": "watch_started", "directory": wallpaper_dir, "watches": len(watch_descriptors)})
+
+    pending_files = set()
+    last_event_time = 0.0
+    running = True
+
+    def handle_signal(signum, frame):
+        nonlocal running
+        running = False
+
+    signal.signal(signal.SIGTERM, handle_signal)
+    signal.signal(signal.SIGINT, handle_signal)
+
+    try:
+        while running:
+            if pending_files:
+                elapsed = time.time() - last_event_time
+                timeout = max(0.05, 1.0 - elapsed)
+            else:
+                timeout = 1.0
+
+            try:
+                r, _, _ = select.select([fd], [], [], timeout)
+            except (InterruptedError, select.error, OSError):
+                break
+
+            if r:
+                try:
+                    buf = os.read(fd, 65536)
+                except BlockingIOError:
+                    buf = b""
+                except OSError:
+                    break
+
+                offset = 0
+                while offset + 16 <= len(buf):
+                    wd, ev_mask, cookie, length = struct.unpack_from("iIII", buf, offset)
+                    name_bytes = buf[offset+16:offset+16+length].rstrip(b'\x00')
+                    name = name_bytes.decode("utf-8", errors="replace")
+                    offset += 16 + length
+
+                    dir_path = watch_descriptors.get(wd, wallpaper_dir)
+                    full_path = os.path.join(dir_path, name)
+
+                    if (ev_mask & IN_ISDIR) and (ev_mask & (IN_CREATE | IN_MOVED_TO)):
+                        if os.path.isdir(full_path):
+                            add_watch_recursive(full_path)
+                        continue
+
+                    if ev_mask & (IN_CLOSE_WRITE | IN_MOVED_TO):
+                        if name and not name.startswith(".") and name.lower().endswith(extensions):
+                            pending_files.add(full_path)
+                            last_event_time = time.time()
+
+            # Process debounced files
+            if pending_files and (time.time() - last_event_time >= 1.0):
+                batch = sorted(list(pending_files))
+                pending_files.clear()
+
+                for fpath in batch:
+                    if not running:
+                        break
+                    if os.path.isfile(fpath):
+                        emit_json({"status": "watched_detected", "file": os.path.basename(fpath)})
+                        try:
+                            run_generate(fpath, threshold=threshold, feather=feather, device=device, wallpaper_dir=wallpaper_dir)
+                            emit_json({
+                                "status": "watched_generate",
+                                "wallpaper": fpath
+                            })
+                        except Exception as e:
+                            emit_error(f"Watcher generation failed for {fpath}: {e}")
+    finally:
+        try:
+            os.close(fd)
+        except Exception:
+            pass
+
+    emit_json({"status": "watch_stopped"})
+    return True
+
+
 def main():
     setup_pdeathsig()
 
@@ -613,6 +774,12 @@ def main():
     pregen_parser.add_argument("--feather", type=int, default=8)
     pregen_parser.add_argument("--device", choices=["cpu", "auto", "gpu"], default="cpu")
 
+    watch_parser = subparsers.add_parser("watch")
+    watch_parser.add_argument("wallpaper_dir", help="Wallpaper directory to monitor")
+    watch_parser.add_argument("--threshold", type=int, default=30)
+    watch_parser.add_argument("--feather", type=int, default=8)
+    watch_parser.add_argument("--device", choices=["cpu", "auto", "gpu"], default="cpu")
+
     args = parser.parse_args()
 
     if not args.command or args.command == "status":
@@ -627,36 +794,26 @@ def main():
         run_clear_cache()
         return
 
-    # For generate and pregenerate: ensure we run inside the venv if venv exists
+    # For generate, pregenerate, and watch: ensure we run inside the venv if venv exists
     is_inside_venv = sys.prefix == VENV_DIR
     if not is_inside_venv and os.path.isfile(VENV_PYTHON):
-        # Re-execute under venv python with same arguments
+        # Re-execute in-place under venv python with same arguments
         preload_nvidia_libs(VENV_DIR)
-        cmd = [VENV_PYTHON, __file__] + sys.argv[1:]
-        proc = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr)
-        try:
-            sys.exit(proc.wait())
-        except KeyboardInterrupt:
-            proc.terminate()
-            sys.exit(130)
+        os.execv(VENV_PYTHON, [VENV_PYTHON, __file__] + sys.argv[1:])
 
     # Inside venv: preload nvidia libs
     preload_nvidia_libs(VENV_DIR)
 
     if args.command == "generate":
-        # Acquire lock to ensure single generation at a time
-        lock_file_path = os.path.join(CACHE_DIR, "generate.lock")
-        ensure_dirs()
-        with open(lock_file_path, "w") as lock_file:
-            try:
-                fcntl.flock(lock_file, fcntl.LOCK_EX)
-                run_generate(args.wallpaper, threshold=args.threshold, feather=args.feather, device=args.device, wallpaper_dir=args.wallpaper_dir)
-            finally:
-                fcntl.flock(lock_file, fcntl.LOCK_UN)
+        run_generate(args.wallpaper, threshold=args.threshold, feather=args.feather, device=args.device, wallpaper_dir=args.wallpaper_dir)
 
     elif args.command == "pregenerate":
         wallpaper_dir = os.path.expanduser(args.wallpaper_dir)
         run_pregenerate(wallpaper_dir, threshold=args.threshold, feather=args.feather, device=args.device)
+
+    elif args.command == "watch":
+        wallpaper_dir = os.path.expanduser(args.wallpaper_dir)
+        run_watch(wallpaper_dir, threshold=args.threshold, feather=args.feather, device=args.device)
 
 
 if __name__ == "__main__":
