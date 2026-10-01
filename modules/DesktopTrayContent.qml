@@ -13,15 +13,17 @@ Item {
     property bool editMode: false
     property var anchorWindow: null
     property bool transparentBg: false
+    property string customFont: ""
 
-    readonly property real defaultHeight: 50
-    readonly property bool isVertical: root.height > root.width * 1.2
+    // Orientation is passed in (the box shape can't be used to guess it, e.g. a 1-icon tray is nearly square)
+    property bool vertical: false
+
+    readonly property bool isVertical: root.vertical
     readonly property real crossAxisLength: isVertical ? root.width : root.height
-    readonly property real scaleFactor: Math.max(0.6, Math.min(crossAxisLength / defaultHeight, (isVertical ? root.height : root.width) / 60))
-    readonly property int iconSize: Math.max(16, Math.min(48, Math.round(24 * (crossAxisLength / defaultHeight))))
-    readonly property int iconSpacing: Math.max(4, Math.round(12 * (crossAxisLength / defaultHeight)))
-
-    property real contentWidth: Math.max(50, trayItemsRow.implicitWidth + 30)
+    readonly property real scaleFactor: Math.max(0.6, crossAxisLength / 50)
+    // Same formulas DesktopLayout uses to size the tray, so the icons always fill it exactly
+    readonly property int iconSize: DesktopLayout.trayIconSize(crossAxisLength)
+    readonly property int iconSpacing: DesktopLayout.traySpacing(crossAxisLength)
 
     DesktopWidgetBackground {
         transparentBg: root.transparentBg
@@ -54,7 +56,7 @@ Item {
             Text {
                 text: "Tray"
                 color: Theme.onPrimaryContainerColor
-                font.family: "CaskaydiaCove Nerd Font Mono"
+                font.family: Theme.widgetFont(root.customFont)
                 font.pixelSize: Math.max(11, Math.round(14 * root.scaleFactor))
                 font.bold: true
             }

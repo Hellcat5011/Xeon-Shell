@@ -10,6 +10,7 @@ Item {
 
     property bool interactive: true
     property bool transparentBg: false
+    property string customFont: ""
 
     readonly property real defaultWidth: 400
     readonly property real defaultHeight: 170
@@ -19,16 +20,21 @@ Item {
         transparentBg: root.transparentBg
     }
 
-    RowLayout {
-        anchors.fill: parent
+    Item {
+        id: container
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
         anchors.margins: Math.round(16 * root.scaleFactor)
-        spacing: Math.round(14 * root.scaleFactor)
 
-        // Album Art
+        // Album Art: anchored to top, bottom, and left
         Rectangle {
             id: artContainer
-            Layout.preferredWidth: Math.round(90 * root.scaleFactor)
-            Layout.preferredHeight: Math.round(90 * root.scaleFactor)
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            width: Math.min(height, Math.round(parent.width * 0.42))
             radius: Theme.radiusSmall
             color: "transparent"
             clip: true
@@ -90,7 +96,7 @@ Item {
                     model: 5
                     Item {
                         width: Math.max(4, Math.round(7 * root.scaleFactor))
-                        height: Math.round(44 * root.scaleFactor)
+                        height: Math.round(artContainer.height * 0.45)
                         anchors.verticalCenter: parent.verticalCenter
 
                         Rectangle {
@@ -120,37 +126,106 @@ Item {
             }
         }
 
-        // Media Info & Controls
-        ColumnLayout {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            spacing: Math.round(3 * root.scaleFactor)
+        // Media Info & Controls: anchored to top, bottom, left (artContainer.right), and right
+        Item {
+            id: rightContent
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.left: artContainer.right
+            anchors.right: parent.right
+            anchors.leftMargin: Math.round(14 * root.scaleFactor)
 
-            Text {
-                Layout.fillWidth: true
-                text: MprisService.mprisData.title ? MprisService.mprisData.title : "No Media"
-                color: Theme.onPrimaryContainerColor
-                font.family: "CaskaydiaCove Nerd Font Mono"
-                font.bold: true
-                font.pixelSize: Math.max(11, Math.round(16 * root.scaleFactor))
-                elide: Text.ElideRight
+            // Track Info
+            ColumnLayout {
+                id: trackInfo
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                spacing: Math.round(3 * root.scaleFactor)
+
+                Text {
+                    Layout.fillWidth: true
+                    text: MprisService.mprisData.title ? MprisService.mprisData.title : "No Media"
+                    color: Theme.onPrimaryContainerColor
+                    font.family: Theme.widgetFont(root.customFont)
+                    font.bold: true
+                    font.pixelSize: Math.max(11, Math.round(16 * root.scaleFactor))
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: MprisService.mprisData.artist ? MprisService.mprisData.artist : ""
+                    color: Theme.onPrimaryContainerColor
+                    font.family: Theme.widgetFont(root.customFont)
+                    font.pixelSize: Math.max(9, Math.round(14 * root.scaleFactor))
+                    elide: Text.ElideRight
+                }
             }
 
-            Text {
-                Layout.fillWidth: true
-                text: MprisService.mprisData.artist ? MprisService.mprisData.artist : ""
-                color: Theme.onPrimaryContainerColor
-                font.family: "CaskaydiaCove Nerd Font Mono"
-                font.pixelSize: Math.max(9, Math.round(14 * root.scaleFactor))
-                elide: Text.ElideRight
-            }
+            // Controls row
+            RowLayout {
+                id: controlsRow
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: Math.max(28, Math.round(36 * root.scaleFactor))
+                spacing: Math.round(18 * root.scaleFactor)
 
-            Item { Layout.fillHeight: true } // Spacer
+                Item { Layout.fillWidth: true }
+
+                // Previous
+                Text {
+                    text: "󰒮"
+                    font.family: "CaskaydiaCove Nerd Font Mono"
+                    font.pixelSize: Math.max(16, Math.round(24 * root.scaleFactor))
+                    color: Theme.onPrimaryContainerColor
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: root.interactive
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: MprisService.runPlayerCtl("previous")
+                    }
+                }
+
+                // Play/Pause
+                Text {
+                    text: MprisService.isPlaying ? "󰏤" : "󰐊"
+                    font.family: "CaskaydiaCove Nerd Font Mono"
+                    font.pixelSize: Math.max(20, Math.round(32 * root.scaleFactor))
+                    color: Theme.onPrimaryContainerColor
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: root.interactive
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: MprisService.runPlayerCtl("play-pause")
+                    }
+                }
+
+                // Next
+                Text {
+                    text: "󰒭"
+                    font.family: "CaskaydiaCove Nerd Font Mono"
+                    font.pixelSize: Math.max(16, Math.round(24 * root.scaleFactor))
+                    color: Theme.onPrimaryContainerColor
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: root.interactive
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: MprisService.runPlayerCtl("next")
+                    }
+                }
+
+                Item { Layout.fillWidth: true }
+            }
 
             // ── Squiggly progress bar ──────────────────
             Canvas {
                 id: progressCanvas
-                Layout.fillWidth: true
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: controlsRow.top
+                anchors.bottomMargin: Math.max(2, Math.round(4 * root.scaleFactor))
                 height: Math.max(16, Math.round(22 * root.scaleFactor))
 
                 property real progress: MprisService.trackLength > 0 ? Math.min(MprisService.trackPosition / MprisService.trackLength, 1.0) : 0
@@ -261,54 +336,6 @@ Item {
                         ctx.arc(progressX, centerY, Math.max(3, Math.round(5 * root.scaleFactor)), 0, Math.PI * 2)
                         ctx.fillStyle = Theme.onPrimaryContainerColor
                         ctx.fill()
-                    }
-                }
-            }
-
-            // Controls row
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                spacing: Math.round(18 * root.scaleFactor)
-
-                // Previous
-                Text {
-                    text: "󰒮"
-                    font.family: "CaskaydiaCove Nerd Font Mono"
-                    font.pixelSize: Math.max(16, Math.round(24 * root.scaleFactor))
-                    color: Theme.onPrimaryContainerColor
-                    MouseArea {
-                        anchors.fill: parent
-                        enabled: root.interactive
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: MprisService.runPlayerCtl("previous")
-                    }
-                }
-
-                // Play/Pause
-                Text {
-                    text: MprisService.isPlaying ? "󰏤" : "󰐊"
-                    font.family: "CaskaydiaCove Nerd Font Mono"
-                    font.pixelSize: Math.max(20, Math.round(32 * root.scaleFactor))
-                    color: Theme.onPrimaryContainerColor
-                    MouseArea {
-                        anchors.fill: parent
-                        enabled: root.interactive
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: MprisService.runPlayerCtl("play-pause")
-                    }
-                }
-
-                // Next
-                Text {
-                    text: "󰒭"
-                    font.family: "CaskaydiaCove Nerd Font Mono"
-                    font.pixelSize: Math.max(16, Math.round(24 * root.scaleFactor))
-                    color: Theme.onPrimaryContainerColor
-                    MouseArea {
-                        anchors.fill: parent
-                        enabled: root.interactive
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: MprisService.runPlayerCtl("next")
                     }
                 }
             }

@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls.Basic
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.SystemTray
 import Quickshell.Wayland
 import "../services"
 
@@ -14,6 +15,11 @@ Scope {
     property var workingLayout: ({})
     property int layoutRevision: 0
     property string openPopoverWidgetId: ""
+
+    // The tray is sized from its icon count. With nothing in the tray the
+    // edit-mode placeholder is shown, sized as if it held 3 icons.
+    readonly property int trayCount: SystemTray.items.values.length
+    readonly property int trayPreviewCount: root.trayCount > 0 ? root.trayCount : 3
 
     signal closed(bool saved)
 
@@ -77,7 +83,9 @@ Scope {
                     h: cur[id].h,
                     visible: cur[id].visible !== false,
                     transparentBg: cur[id].transparentBg === true,
-                    sendToBackground: cur[id].sendToBackground === true
+                    sendToBackground: cur[id].sendToBackground === true,
+                    hideDate: cur[id].hideDate === true,
+                    fontFamily: (typeof cur[id].fontFamily === "string") ? cur[id].fontFamily : ""
                 };
             } else {
                 wl[id] = {
@@ -87,20 +95,65 @@ Scope {
                     h: def[id].h,
                     visible: true,
                     transparentBg: false,
-                    sendToBackground: false
+                    sendToBackground: false,
+                    hideDate: def[id].hideDate === true,
+                    fontFamily: ""
                 };
             }
         }
         root.workingLayout = wl;
+        // Replace the tray's saved rectangle with the rectangle it really occupies
+        // for the current icon count, so what gets saved matches what is shown.
+        root.layoutTray(DesktopLayout.hasStored("tray") ? cur["tray"] : null);
+        root.layoutRevision++;
+    }
+
+    function primaryScreenSize() {
+        let sw = (Quickshell.screens.length > 0 && Quickshell.screens[0].width > 0) ? Quickshell.screens[0].width : 1920;
+        let sh = (Quickshell.screens.length > 0 && Quickshell.screens[0].height > 0) ? Quickshell.screens[0].height : 1080;
+        return { w: sw, h: sh };
+    }
+
+    // Writes the count-derived tray rectangle (computed from `raw`) into the working layout
+    function layoutTray(raw) {
+        let t = root.workingLayout["tray"];
+        if (!t) return;
+        let s = root.primaryScreenSize();
+        let r = DesktopLayout.computeTrayRect(raw, root.trayPreviewCount, s.w, s.h);
+        t.x = r.x / s.w;
+        t.y = r.y / s.h;
+        t.w = r.w / s.w;
+        t.h = r.h / s.h;
+        t.vertical = r.vertical;
+    }
+
+    function updateTrayVertical(val) {
+        let t = root.workingLayout["tray"];
+        if (!t) return;
+        let s = root.primaryScreenSize();
+        let cur = DesktopLayout.computeTrayRect(t, root.trayPreviewCount, s.w, s.h);
+        if (cur.vertical === val) return;
+        let len = DesktopLayout.trayLength(root.trayPreviewCount, cur.thickness);
+        root.layoutTray({
+            x: cur.x / s.w,
+            y: cur.y / s.h,
+            w: (val ? cur.thickness : len) / s.w,
+            h: (val ? len : cur.thickness) / s.h,
+            vertical: val
+        });
         root.layoutRevision++;
     }
 
     function updateWidgetGeometry(id, xFrac, yFrac, wFrac, hFrac) {
         if (!root.workingLayout[id]) return;
-        root.workingLayout[id].x = xFrac;
-        root.workingLayout[id].y = yFrac;
-        root.workingLayout[id].w = wFrac;
-        root.workingLayout[id].h = hFrac;
+        let w = Math.max(0.01, Math.min(1.0, wFrac));
+        let h = Math.max(0.01, Math.min(1.0, hFrac));
+        let x = Math.max(0.0, Math.min(1.0 - w, xFrac));
+        let y = Math.max(0.0, Math.min(1.0 - h, yFrac));
+        root.workingLayout[id].x = x;
+        root.workingLayout[id].y = y;
+        root.workingLayout[id].w = w;
+        root.workingLayout[id].h = h;
         root.layoutRevision++;
     }
 
@@ -113,6 +166,18 @@ Scope {
     function updateWidgetSendToBackground(id, val) {
         if (!root.workingLayout[id]) return;
         root.workingLayout[id].sendToBackground = val;
+        root.layoutRevision++;
+    }
+
+    function updateWidgetHideDate(id, val) {
+        if (!root.workingLayout[id]) return;
+        root.workingLayout[id].hideDate = val;
+        root.layoutRevision++;
+    }
+
+    function updateWidgetFontFamily(id, val) {
+        if (!root.workingLayout[id]) return;
+        root.workingLayout[id].fontFamily = val;
         root.layoutRevision++;
     }
 
@@ -261,11 +326,11 @@ Scope {
                             property var widgetData: {
                                 // Re-evaluate whenever the working layout is committed (drag/resize release, remove, restore)
                                 let dep = widgetWrapper.rev;
-                                let d = root.workingLayout[widgetId] || ({ x: 0, y: 0, w: 0.2, h: 0.15, visible: true, transparentBg: false, sendToBackground: false });
+                                let d = root.workingLayout[widgetId] || ({ x: 0, y: 0, w: 0.2, h: 0.15, visible: true, transparentBg: false, sendToBackground: false, hideDate: false, fontFamily: "" });
                                 // Return a NEW object each time. A var property only emits a change
                                 // signal when it gets a different object, and workingLayout[id] is
                                 // mutated in place, so returning it directly never notifies.
-                                return ({ x: d.x, y: d.y, w: d.w, h: d.h, visible: d.visible, transparentBg: d.transparentBg === true, sendToBackground: d.sendToBackground === true });
+                                return ({ x: d.x, y: d.y, w: d.w, h: d.h, vertical: d.vertical, visible: d.visible, transparentBg: d.transparentBg === true, sendToBackground: d.sendToBackground === true, hideDate: d.hideDate === true, fontFamily: (typeof d.fontFamily === "string") ? d.fontFamily : "" });
                             }
                             visible: widgetData.visible !== false
 
@@ -281,10 +346,14 @@ Scope {
                             property real resizeDH: 0
 
                             // Committed geometry (pixels) derived from the working layout
-                            property real baseW: Math.max(minW, Math.min(overlayWindow.screenW, Math.round((widgetData.w || 0.2) * overlayWindow.screenW)))
-                            property real baseH: Math.max(minH, Math.min(overlayWindow.screenH, Math.round((widgetData.h || 0.15) * overlayWindow.screenH)))
-                            property real baseX: Math.max(0, Math.min(overlayWindow.screenW - baseW, Math.round((widgetData.x || 0) * overlayWindow.screenW)))
-                            property real baseY: Math.max(0, Math.min(overlayWindow.screenH - baseH, Math.round((widgetData.y || 0) * overlayWindow.screenH)))
+                            // The tray's size and position come from its icon count (see DesktopLayout.computeTrayRect)
+                            readonly property bool isTray: widgetId === "tray"
+                            property var trayRect: isTray ? DesktopLayout.computeTrayRect(widgetData, root.trayPreviewCount, overlayWindow.screenW, overlayWindow.screenH) : null
+
+                            property real baseW: isTray ? trayRect.w : Math.max(minW, Math.min(overlayWindow.screenW, Math.round((widgetData.w || 0.2) * overlayWindow.screenW)))
+                            property real baseH: isTray ? trayRect.h : Math.max(minH, Math.min(overlayWindow.screenH, Math.round((widgetData.h || 0.15) * overlayWindow.screenH)))
+                            property real baseX: isTray ? trayRect.x : Math.max(0, Math.min(overlayWindow.screenW - baseW, Math.round((widgetData.x || 0) * overlayWindow.screenW)))
+                            property real baseY: isTray ? trayRect.y : Math.max(0, Math.min(overlayWindow.screenH - baseH, Math.round((widgetData.y || 0) * overlayWindow.screenH)))
 
                             width: baseW + resizeDW
                             height: baseH + resizeDH
@@ -296,9 +365,35 @@ Scope {
                                 if (dragDX === 0 && dragDY === 0 && resizeDW === 0 && resizeDH === 0) return;
                                 let sw = overlayWindow.screenW;
                                 let sh = overlayWindow.screenH;
-                                let fx = x / sw, fy = y / sh, fw = width / sw, fh = height / sh;
+                                let clW = Math.max(minW, Math.min(sw, width));
+                                let clH = Math.max(minH, Math.min(sh, height));
+                                let clX = Math.max(0, Math.min(sw - clW, x));
+                                let clY = Math.max(0, Math.min(sh - clH, y));
+                                let fx = clX / sw, fy = clY / sh, fw = clW / sw, fh = clH / sh;
                                 root.updateWidgetGeometry(widgetId, fx, fy, fw, fh);
                                 dragDX = 0; dragDY = 0; resizeDW = 0; resizeDH = 0;
+                            }
+
+                            // Tray resize: only the thickness changes (icons scale with it) and the
+                            // length follows from the icon count. If it would run off a screen edge
+                            // it is pushed back on screen instead of being cut off.
+                            function resizeTray(delta) {
+                                let r = trayRect;
+                                let sw = overlayWindow.screenW;
+                                let sh = overlayWindow.screenH;
+                                let n = root.trayPreviewCount;
+                                let baseMain = r.vertical ? r.h : r.w;
+                                let wanted = Math.round(r.thickness * Math.max(0.1, (baseMain + delta) / baseMain));
+                                let minT = Math.min(minW, minH);
+                                let t = Math.max(minT, Math.min(wanted, r.vertical ? sw : sh));
+                                t = DesktopLayout.trayFitThickness(n, t, r.vertical ? sh : sw, minT);
+                                let len = DesktopLayout.trayLength(n, t);
+                                let newW = r.vertical ? t : len;
+                                let newH = r.vertical ? len : t;
+                                resizeDW = newW - baseW;
+                                resizeDH = newH - baseH;
+                                dragDX = Math.min(0, sw - (baseX + newW));
+                                dragDY = Math.min(0, sh - (baseY + newH));
                             }
 
                             // Abort an in-flight drag/resize without saving anything
@@ -343,22 +438,41 @@ Scope {
 
                             Component {
                                 id: mprisComp
-                                DesktopMprisContent { interactive: false; transparentBg: widgetWrapper.widgetData.transparentBg }
+                                DesktopMprisContent {
+                                    interactive: false
+                                    transparentBg: widgetWrapper.widgetData.transparentBg
+                                    customFont: widgetWrapper.widgetData.fontFamily
+                                }
                             }
 
                             Component {
                                 id: trayComp
-                                DesktopTrayContent { interactive: false; editMode: true; transparentBg: widgetWrapper.widgetData.transparentBg }
+                                DesktopTrayContent {
+                                    interactive: false
+                                    editMode: true
+                                    vertical: widgetWrapper.trayRect ? widgetWrapper.trayRect.vertical : false
+                                    transparentBg: widgetWrapper.widgetData.transparentBg
+                                    customFont: widgetWrapper.widgetData.fontFamily
+                                }
                             }
 
                             Component {
                                 id: clockComp
-                                DesktopClockContent { interactive: false; transparentBg: widgetWrapper.widgetData.transparentBg }
+                                DesktopClockContent {
+                                    interactive: false
+                                    transparentBg: widgetWrapper.widgetData.transparentBg
+                                    hideDate: widgetWrapper.widgetData.hideDate
+                                    customFont: widgetWrapper.widgetData.fontFamily
+                                }
                             }
 
                             Component {
                                 id: calendarComp
-                                DesktopCalendarContent { interactive: false; transparentBg: widgetWrapper.widgetData.transparentBg }
+                                DesktopCalendarContent {
+                                    interactive: false
+                                    transparentBg: widgetWrapper.widgetData.transparentBg
+                                    customFont: widgetWrapper.widgetData.fontFamily
+                                }
                             }
 
                             // Drag MouseArea covering the widget
@@ -440,8 +554,8 @@ Scope {
                                 id: gearPopover
                                 visible: root.openPopoverWidgetId === widgetId
                                 z: 200
-                                width: 240
-                                height: 124
+                                width: 270
+                                height: (widgetId === "clock" || widgetId === "tray") ? 232 : 180
                                 radius: Theme.radiusSmall
                                 color: Qt.rgba(Theme.inversePrimary.r, Theme.inversePrimary.g, Theme.inversePrimary.b, 0.98)
                                 border.width: 1
@@ -472,17 +586,21 @@ Scope {
                                             spacing: 2
 
                                             Text {
+                                                Layout.fillWidth: true
                                                 text: "Transparent background"
                                                 color: Theme.onPrimaryContainerColor
                                                 font.pixelSize: 12
                                                 font.weight: Font.Medium
+                                                elide: Text.ElideRight
                                             }
 
                                             Text {
+                                                Layout.fillWidth: true
                                                 text: "Hide widget container fill"
                                                 color: Theme.onPrimaryContainerColor
                                                 opacity: 0.6
                                                 font.pixelSize: 10
+                                                elide: Text.ElideRight
                                             }
                                         }
 
@@ -503,17 +621,21 @@ Scope {
                                             spacing: 2
 
                                             Text {
+                                                Layout.fillWidth: true
                                                 text: "Send to background"
                                                 color: Theme.onPrimaryContainerColor
                                                 font.pixelSize: 12
                                                 font.weight: Font.Medium
+                                                elide: Text.ElideRight
                                             }
 
                                             Text {
+                                                Layout.fillWidth: true
                                                 text: "Pass behind wallpaper scenery"
                                                 color: Theme.onPrimaryContainerColor
                                                 opacity: 0.6
                                                 font.pixelSize: 10
+                                                elide: Text.ElideRight
                                             }
                                         }
 
@@ -521,6 +643,163 @@ Scope {
                                             Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
                                             checked: widgetWrapper.widgetData.sendToBackground
                                             onToggled: (val) => root.updateWidgetSendToBackground(widgetId, val)
+                                        }
+                                    }
+
+                                    // 3. Font (All widgets)
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 10
+
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 2
+
+                                            Text {
+                                                Layout.fillWidth: true
+                                                text: "Font"
+                                                color: Theme.onPrimaryContainerColor
+                                                font.pixelSize: 12
+                                                font.weight: Font.Medium
+                                                elide: Text.ElideRight
+                                            }
+
+                                            Text {
+                                                Layout.fillWidth: true
+                                                text: "Widget font family"
+                                                color: Theme.onPrimaryContainerColor
+                                                opacity: 0.6
+                                                font.pixelSize: 10
+                                                elide: Text.ElideRight
+                                            }
+                                        }
+
+                                        StyledComboBox {
+                                            Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                            Layout.preferredWidth: 140
+                                            implicitHeight: 32
+                                            searchable: true
+                                            searchPlaceholder: "Search fonts..."
+                                            model: Theme.widgetFontOptions
+                                            currentIndex: {
+                                                let cur = widgetWrapper.widgetData.fontFamily;
+                                                if (!cur || cur === "" || cur === "Inherit" || cur === "Default") return 0;
+                                                let idx = Theme.widgetFontOptions.indexOf(cur);
+                                                return idx >= 0 ? idx : 0;
+                                            }
+                                            onActivated: {
+                                                let choice = model[currentIndex];
+                                                if (currentIndex === 0 || choice === "Default (Global)") {
+                                                    root.updateWidgetFontFamily(widgetId, "");
+                                                } else {
+                                                    root.updateWidgetFontFamily(widgetId, choice);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // 4a. Orientation (Tray widget only)
+                                    RowLayout {
+                                        visible: widgetId === "tray"
+                                        Layout.fillWidth: true
+                                        spacing: 10
+
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 2
+
+                                            Text {
+                                                Layout.fillWidth: true
+                                                text: "Orientation"
+                                                color: Theme.onPrimaryContainerColor
+                                                font.pixelSize: 12
+                                                font.weight: Font.Medium
+                                                elide: Text.ElideRight
+                                            }
+
+                                            Text {
+                                                Layout.fillWidth: true
+                                                text: "Icons in a row or a column"
+                                                color: Theme.onPrimaryContainerColor
+                                                opacity: 0.6
+                                                font.pixelSize: 10
+                                                elide: Text.ElideRight
+                                            }
+                                        }
+
+                                        Row {
+                                            Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                            spacing: 4
+
+                                            Repeater {
+                                                model: [
+                                                    { label: "Horizontal", vert: false },
+                                                    { label: "Vertical", vert: true }
+                                                ]
+
+                                                delegate: Rectangle {
+                                                    readonly property bool selected: (widgetWrapper.trayRect ? widgetWrapper.trayRect.vertical : false) === modelData.vert
+                                                    width: 64
+                                                    height: 28
+                                                    radius: 14
+                                                    color: selected ? Theme.primary
+                                                         : (orientMouse.containsMouse ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.25) : "transparent")
+                                                    border.width: 1
+                                                    border.color: selected ? Theme.primary : Theme.outlineVariant
+
+                                                    Text {
+                                                        anchors.centerIn: parent
+                                                        text: modelData.label
+                                                        color: parent.selected ? Theme.inversePrimary : Theme.onPrimaryContainerColor
+                                                        font.pixelSize: 10
+                                                        font.weight: Font.Medium
+                                                    }
+
+                                                    MouseArea {
+                                                        id: orientMouse
+                                                        anchors.fill: parent
+                                                        hoverEnabled: true
+                                                        cursorShape: Qt.PointingHandCursor
+                                                        onClicked: root.updateTrayVertical(modelData.vert)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // 4. Hide day and date (Clock widget only)
+                                    RowLayout {
+                                        visible: widgetId === "clock"
+                                        Layout.fillWidth: true
+                                        spacing: 10
+
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 2
+
+                                            Text {
+                                                Layout.fillWidth: true
+                                                text: "Hide day and date"
+                                                color: Theme.onPrimaryContainerColor
+                                                font.pixelSize: 12
+                                                font.weight: Font.Medium
+                                                elide: Text.ElideRight
+                                            }
+
+                                            Text {
+                                                Layout.fillWidth: true
+                                                text: "Display clock time only"
+                                                color: Theme.onPrimaryContainerColor
+                                                opacity: 0.6
+                                                font.pixelSize: 10
+                                                elide: Text.ElideRight
+                                            }
+                                        }
+
+                                        PillSwitch {
+                                            Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                            checked: widgetWrapper.widgetData.hideDate === true
+                                            onToggled: (val) => root.updateWidgetHideDate(widgetId, val)
                                         }
                                     }
                                 }
@@ -614,8 +893,13 @@ Scope {
                                     onPositionChanged: (mouse) => {
                                         if (!pressed) return;
                                         let p = mapToItem(widgetsContainer, mouse.x, mouse.y);
-                                        let maxW = overlayWindow.screenW - widgetWrapper.baseX;
-                                        let maxH = overlayWindow.screenH - widgetWrapper.baseY;
+                                        if (widgetWrapper.isTray) {
+                                            // Drag right/down = bigger icons, left/up = smaller
+                                            widgetWrapper.resizeTray((p.x - pressSceneX) + (p.y - pressSceneY));
+                                            return;
+                                        }
+                                        let maxW = Math.max(widgetWrapper.minW, overlayWindow.screenW - widgetWrapper.x);
+                                        let maxH = Math.max(widgetWrapper.minH, overlayWindow.screenH - widgetWrapper.y);
                                         let newW = Math.max(widgetWrapper.minW, Math.min(maxW, Math.round(widgetWrapper.baseW + (p.x - pressSceneX))));
                                         let newH = Math.max(widgetWrapper.minH, Math.min(maxH, Math.round(widgetWrapper.baseH + (p.y - pressSceneY))));
                                         widgetWrapper.resizeDW = newW - widgetWrapper.baseW;
@@ -657,7 +941,7 @@ Scope {
                         Text {
                             text: "Desktop Edit Mode"
                             color: Theme.onPrimaryContainerColor
-                            font.family: "CaskaydiaCove Nerd Font Mono"
+                            font.family: Theme.globalFont !== "" ? Theme.globalFont : "CaskaydiaCove Nerd Font Mono"
                             font.bold: true
                             font.pixelSize: 13
                         }

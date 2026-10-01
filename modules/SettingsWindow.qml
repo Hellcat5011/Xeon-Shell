@@ -139,7 +139,7 @@ OverlayWindow {
         "Wallpaper Wallpaper Directory The absolute path to the directory containing your wallpaper images. Wallpaper Daemon The backend service used to set and render your desktop wallpapers. Wallpaper Depth Makes desktop widgets pass behind wallpaper foregrounds. Status Active Device Install Install GPU support Compute device Generate automatically Pre-generate Foreground threshold Edge feather Generate now Clear cache",
         "Lock Screen Lockscreen Power Menu Allow session control actions (Suspend, Reboot, Shutdown) directly from the lockscreen. Lockscreen Alignment Position the lockscreen elements aligned to the left or right edge of the screen.",
         "Greeter Remember Last User Save the last logged-in user and session to automatically pre-select them on the next boot.",
-        "Display Manage idle behavior Automatically lock the screen when the system is idle. Lock timeout Time in minutes before the screen is locked. Blue Light Filter Toggle the blue light filter (night light). Turn on now Manually force the blue light filter on. Mode Fixed Time, Sunset/Sunrise Night Schedule Night starts Night ends The filter is active between these times Coordinates Use realtime location based on IP Transition Duration Time in minutes for the color temperature to transition. Day Temperature Color temperature during the day (K). Night Temperature Color temperature at night (K).",
+        "Display Global font Select a global font for the shell and desktop widgets. Manage idle behavior Automatically lock the screen when the system is idle. Lock timeout Time in minutes before the screen is locked. Blue Light Filter Toggle the blue light filter (night light). Turn on now Manually force the blue light filter on. Mode Fixed Time, Sunset/Sunrise Night Schedule Night starts Night ends The filter is active between these times Coordinates Use realtime location based on IP Transition Duration Time in minutes for the color temperature to transition. Day Temperature Color temperature during the day (K). Night Temperature Color temperature at night (K).",
         "Desktop Desktop Edit Mode Reposition, resize, remove and re-add desktop widgets.",
         "Screenshot Screenshot Directory The folder where screenshots are saved. Recording Directory The folder where screen recordings are saved."
     ]
@@ -785,7 +785,36 @@ OverlayWindow {
                                 Layout.fillWidth: true
                                 spacing: 24
                                 visible: tabList.currentIndex === 3
-                        
+
+                        // Setting: Global font
+                        RowLayout {
+                            visible: root.fuzzyMatch(searchField.text, "Global font Select a global font for the shell and desktop widgets.")
+                            Layout.fillWidth: true
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+                                Text { text: "Global font"; color: Theme.onPrimaryContainerColor; font.pixelSize: 15; font.weight: Font.Medium }
+                                Text { text: "Select a global font for the shell and desktop widgets."; color: Theme.onPrimaryContainerColor; opacity: 0.6; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                            }
+
+                            StyledComboBox {
+                                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                Layout.preferredWidth: 220
+                                searchable: true
+                                searchPlaceholder: "Search fonts..."
+                                model: Theme.availableFonts
+                                currentIndex: {
+                                    let cur = Config.draftGlobalFont || Config.globalFont || "System Default";
+                                    let idx = Theme.availableFonts.indexOf(cur);
+                                    return idx >= 0 ? idx : 0;
+                                }
+                                onActivated: {
+                                    Config.draftGlobalFont = model[currentIndex];
+                                }
+                            }
+                        }
+
                         // Setting: Manage idle behavior
                         RowLayout {
                             visible: root.fuzzyMatch(searchField.text, "Manage idle behavior Automatically lock the screen when the system is idle.")

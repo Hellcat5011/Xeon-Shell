@@ -5,6 +5,8 @@ Item {
     id: root
     width: 50
     height: 28
+    implicitWidth: 50
+    implicitHeight: 28
 
     property bool checked: false
     signal toggled(bool value)

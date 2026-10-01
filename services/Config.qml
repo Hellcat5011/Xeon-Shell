@@ -52,10 +52,12 @@ Item {
     property alias depthThreshold: settings.depthThreshold
     property alias depthFeather: settings.depthFeather
     property alias depthDevice: settings.depthDevice
+    property alias globalFont: settings.globalFont
 
     // Draft values — the Settings UI edits these. They do not affect the
     // shell's live behavior until save() is called.
     property string draftWallpaperDir: ""
+    property string draftGlobalFont: ""
     property string draftWallpaperDaemon: ""
     property bool   draftShowLockscreenSessionControls: true
     property string draftLockscreenAlignment: "left"
@@ -105,7 +107,8 @@ Item {
         draftDepthPregenerate !== depthPregenerate ||
         draftDepthThreshold !== depthThreshold ||
         draftDepthFeather !== depthFeather ||
-        draftDepthDevice !== depthDevice
+        draftDepthDevice !== depthDevice ||
+        draftGlobalFont !== globalFont
 
     function save() {
         let needsRestart = false;
@@ -137,6 +140,7 @@ Item {
         depthThreshold = draftDepthThreshold
         depthFeather = draftDepthFeather
         depthDevice = draftDepthDevice
+        globalFont = draftGlobalFont
 
         if (needsRestart) {
             restartProcess.running = true;
@@ -168,6 +172,7 @@ Item {
         draftDepthThreshold = depthThreshold
         draftDepthFeather = depthFeather
         draftDepthDevice = depthDevice
+        draftGlobalFont = globalFont
     }
 
     Settings {
@@ -210,5 +215,6 @@ Item {
         property int depthThreshold: 30
         property int depthFeather: 8
         property string depthDevice: "cpu"
+        property string globalFont: "System Default"
     }
 }

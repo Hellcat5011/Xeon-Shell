@@ -13,9 +13,10 @@ PanelWindow {
     WlrLayershell.namespace: "desktop"
     color: "transparent"
 
-    readonly property bool hasItems: SystemTray.items.values.length > 0
-    readonly property real defaultTrayWidth: Math.max(50, SystemTray.items.values.length * 36 + 20)
-    readonly property var geom: DesktopLayout.getWidgetGeometry("tray", DesktopLayout.screenWidth, DesktopLayout.screenHeight, root.defaultTrayWidth, 50)
+    readonly property int itemCount: SystemTray.items.values.length
+    readonly property bool hasItems: itemCount > 0
+    // Length follows the icon count; position/edge-pinning come from the saved layout
+    readonly property var geom: DesktopLayout.getTrayGeometry(root.itemCount, DesktopLayout.screenWidth, DesktopLayout.screenHeight)
 
     anchors {
         top: true
@@ -46,8 +47,10 @@ PanelWindow {
             anchors.fill: parent
             interactive: true
             editMode: false
+            vertical: root.geom.vertical
             anchorWindow: root
             transparentBg: root.geom.transparentBg
+            customFont: root.geom.fontFamily || ""
         }
     }
 }

@@ -9,6 +9,7 @@ Item {
 
     property bool interactive: true
     property bool transparentBg: false
+    property string customFont: ""
 
     readonly property real defaultWidth: 360
     readonly property real defaultHeight: 320
@@ -61,7 +62,7 @@ Item {
                 Text {
                     text: Qt.formatDate(root.selectedDate, "MMMM")
                     color: Theme.onPrimaryContainerColor
-                    font.family: "CaskaydiaCove Nerd Font Mono"
+                    font.family: Theme.widgetFont(root.customFont)
                     font.bold: true
                     font.pixelSize: Math.max(12, Math.round(16 * root.scaleFactor))
                     MouseArea {
@@ -76,7 +77,7 @@ Item {
                 Text {
                     text: Qt.formatDate(root.selectedDate, "yyyy")
                     color: Theme.onPrimaryContainerColor
-                    font.family: "CaskaydiaCove Nerd Font Mono"
+                    font.family: Theme.widgetFont(root.customFont)
                     font.bold: true
                     font.pixelSize: Math.max(12, Math.round(16 * root.scaleFactor))
                     MouseArea {
@@ -132,7 +133,7 @@ Item {
                         anchors.centerIn: parent
                         text: modelData
                         color: Theme.onPrimaryContainerColor
-                        font.family: "CaskaydiaCove Nerd Font Mono"
+                        font.family: Theme.widgetFont(root.customFont)
                         font.pixelSize: Math.max(10, Math.round(13 * root.scaleFactor))
                         font.bold: true
                         horizontalAlignment: Text.AlignHCenter
@@ -176,7 +177,7 @@ Item {
                             anchors.centerIn: parent
                             text: modelData
                             color: parent.isToday ? Theme.background : Theme.onPrimaryContainerColor
-                            font.family: "CaskaydiaCove Nerd Font Mono"
+                            font.family: Theme.widgetFont(root.customFont)
                             font.pixelSize: Math.max(10, Math.round(13 * root.scaleFactor))
                             font.bold: parent.isToday
                         }
@@ -210,7 +211,7 @@ Item {
                         anchors.centerIn: parent
                         text: modelData
                         color: parent.isSelected ? Theme.background : Theme.onPrimaryContainerColor
-                        font.family: "CaskaydiaCove Nerd Font Mono"
+                        font.family: Theme.widgetFont(root.customFont)
                         font.pixelSize: Math.max(11, Math.round(15 * root.scaleFactor))
                         font.bold: parent.isSelected
                     }
@@ -263,7 +264,7 @@ Item {
                         anchors.centerIn: parent
                         text: modelData.toString()
                         color: parent.isSelected ? Theme.background : Theme.onPrimaryContainerColor
-                        font.family: "CaskaydiaCove Nerd Font Mono"
+                        font.family: Theme.widgetFont(root.customFont)
                         font.pixelSize: Math.max(11, Math.round(15 * root.scaleFactor))
                         font.bold: parent.isSelected
                     }

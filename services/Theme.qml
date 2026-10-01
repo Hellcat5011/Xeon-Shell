@@ -107,4 +107,42 @@ QtObject {
     readonly property int easeOut:    Easing.OutCubic
     readonly property int radiusSmall: 12
     readonly property int radiusLarge: 24
+
+    // ---- Font tokens & resolution ---------------------------------------
+    readonly property var availableFonts: {
+        let raw = Qt.fontFamilies();
+        let list = ["System Default"];
+        let seen = { "System Default": true };
+        for (let i = 0; i < raw.length; i++) {
+            let f = raw[i];
+            if (!f || f.startsWith(".") || f.startsWith("@") || f.includes("Emoji") || f.includes("Math")) continue;
+            if (!seen[f]) {
+                seen[f] = true;
+                list.push(f);
+            }
+        }
+        return list;
+    }
+
+    readonly property var widgetFontOptions: {
+        let list = ["Default (Global)"];
+        return list.concat(availableFonts);
+    }
+
+    function resolveFont(fontName) {
+        if (!fontName || fontName === "System Default" || fontName === "Default") {
+            return "";
+        }
+        return fontName;
+    }
+
+    readonly property string globalFont: resolveFont(Config.globalFont)
+
+    function widgetFont(customFont) {
+        if (customFont && customFont !== "" && customFont !== "Default (Global)" && customFont !== "Inherit" && customFont !== "Default") {
+            if (customFont === "System Default") return "";
+            return customFont;
+        }
+        return globalFont;
+    }
 }
