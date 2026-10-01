@@ -50,15 +50,16 @@ PanelWindow {
         if (blocked) return;
         if (!active) {
             buildList();
-            if (windowList.length <= 1) {
-                // 0 windows: do nothing. 1 window: do nothing visible.
+            if (windowList.length === 0) {
+                // No windows: nothing to switch to.
                 selectedIndex = 0;
                 active = false;
                 HyprlandService.switcherOpen = false;
                 return;
             }
             focusTargetScreen();
-            selectedIndex = 1;
+            // With a single window there is no "previous" one, so select it directly.
+            selectedIndex = windowList.length > 1 ? 1 : 0;
             active = true;               // maps the (still invisible) overlay and grabs keyboard focus
             HyprlandService.switcherOpen = true;
             showDelayTimer.restart();
@@ -71,7 +72,7 @@ PanelWindow {
         if (blocked) return;
         if (!active) {
             buildList();
-            if (windowList.length <= 1) {
+            if (windowList.length === 0) {
                 selectedIndex = 0;
                 active = false;
                 HyprlandService.switcherOpen = false;
@@ -111,7 +112,16 @@ PanelWindow {
         let list = [];
         for (let tl of Hyprland.toplevels.values) {
             let ipc = tl.lastIpcObject;
-            if (!ipc || ipc.mapped === false || ipc.hidden === true) continue;
+            // Only real, currently-open windows:
+            //  - tl.wayland: Hyprland also tracks windows that exist but are not
+            //    mapped (tray/background apps, closing windows). Those have no
+            //    live wayland toplevel handle, so skipping null drops them.
+            //  - ipc.mapped must be strictly true (an empty/stale ipc object
+            //    would otherwise slip through a `=== false` check).
+            //  - skip windows that have neither a class nor a title.
+            if (!tl.wayland) continue;
+            if (!ipc || ipc.mapped !== true || ipc.hidden === true) continue;
+            if (!ipc.class && !tl.title && !ipc.title) continue;
             let wsId = ipc.workspace ? ipc.workspace.id : 0;
             let wsName = (ipc.workspace && ipc.workspace.name) ? ipc.workspace.name : "";
             // Exclude negative / special workspaces
@@ -141,7 +151,7 @@ PanelWindow {
         interval: 150
         repeat: false
         onTriggered: {
-            if (root.active && root.windowList.length > 1) {
+            if (root.active && root.windowList.length > 0) {
                 root.shown = true;
             }
         }

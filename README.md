@@ -9,16 +9,53 @@ A minimal, feature-rich shell environment built with [Quickshell](https://quicks
 
 Xeon Shell provides a comprehensive set of built-in tools and menus to keep your desktop lightweight and functional:
 
+- **Desktop Widgets & Wallpaper Depth**: Clock, calendar, and media controls featuring neural depth masking that seamlessly places widgets behind wallpaper elements.
 - **App Launcher**: Quickly find and launch your applications.
+- **Control Center & Notifications**: Manage system notifications, volume/brightness sliders, and quick toggles.
+- **Workspace Overview**: Interactive visual workspace overview displaying active windows across all Hyprland workspaces.
+- **Window Switcher (Alt-Tab)**: Fast keyboard-driven application switcher with live window previews.
+- **Settings GUI**: Centralized preferences for wallpaper selection, neural depth estimation (CPU/GPU), lock screen, greeter, and widgets.
+- **Keybindings Cheatsheet**: Quick visual reference overlay for Hyprland and shell shortcuts.
 - **Wallpaper Selector**: Easily switch between your favorite backgrounds.
 - **Blue Light Filter**: Night light with auto sunrise/sunset geolocation calculation, custom scheduling, and smooth gamma transitions via Wayland protocol.
 - **Idle Dimming**: Intelligent pre-lock dimming for laptop panels and external monitors (DDC/CI).
 - **Desktop MPRIS & Audio**: Media controls, album artwork, track seekbar, and audio sink switcher.
 - **Power Menu**: Sleek system controls (shutdown, reboot, suspend, etc.).
-- **Notification Center**: Manage and view your system notifications.
 - **Clipboard Manager**: A full, lightweight clipboard manager written entirely in QML (no reliance on `cliphist`).
 - **Screenshot & Screen Record Utility**: Capture and record your screen effortlessly.
 - **Lockscreen & Greeter**: Custom lockscreen and `greetd` login greeter interface featuring PAM authentication.
+
+## 📸 Screenshots
+
+### Desktop with Widgets & Wallpaper Depth
+![Desktop with Widgets & Wallpaper Depth](assets/screenshots/Desktop-with-widgets.png)
+
+### Wallpaper Selector
+![Wallpaper Selector](assets/screenshots/Wallpaper-switcher.png)
+
+### App Launcher
+![App Launcher](assets/screenshots/app-launcher.png)
+
+### Control Center & Notifications
+![Control Center & Notifications](assets/screenshots/control-center.png)
+
+### Settings Window
+![Settings Window](assets/screenshots/settings.png)
+
+### Workspace Overview
+![Workspace Overview](assets/screenshots/overview.png)
+
+### Window Switcher (Alt-Tab)
+![Window Switcher (Alt-Tab)](assets/screenshots/tab-switcher.png)
+
+### Clipboard Manager
+![Clipboard Manager](assets/screenshots/clipboard.png)
+
+### Keybindings Cheatsheet
+![Keybindings Cheatsheet](assets/screenshots/keybinds.png)
+
+### Lock Screen & Greeter
+![Lock Screen & Greeter](assets/screenshots/lockscreen.png)
 
 ## 📦 Dependencies
 
