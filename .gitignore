@@ -1,5 +1,6 @@
 # User-specific runtime data and caches
 data/current-wallpaper.txt
+scripts/.cache/
 
 # Rust build artifacts (keep the pre-compiled helper binary)
 /target/
@@ -34,6 +35,9 @@ scratch/
 evidence/
 evidence.log
 *.log
+AGENTS.md
+changes/
+plans/
 
 # Process & socket files
 *.pid

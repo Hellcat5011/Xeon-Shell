@@ -1,0 +1,104 @@
+{
+  "f": [
+    "Files",
+    "Font Viewer",
+    "Font Manager",
+    "LibreOffice Math",
+    "LibreOffice Writer"
+  ],
+  "ff": [
+    "LibreOffice",
+    "LibreOffice Base",
+    "LibreOffice Calc",
+    "LibreOffice Draw",
+    "LibreOffice Math"
+  ],
+  "fir": [
+    "Font Viewer",
+    "LibreOffice Math",
+    "Advanced Network Configuration",
+    "Meld",
+    "LibreOffice Draw"
+  ],
+  "term": [
+    "Ghostty",
+    "Micro",
+    "XTerm",
+    "UXTerm",
+    "Boxes"
+  ],
+  "gho": [
+    "Ghostty"
+  ],
+  "code": [
+    "UXTerm",
+    "XTerm",
+    "Antigravity IDE"
+  ],
+  "file": [
+    "Files",
+    "VeraCrypt"
+  ],
+  "naut": [
+    "Files"
+  ],
+  "set": [
+    "Qt6 Settings",
+    "Volume Control",
+    "NVIDIA X Server Settings",
+    "SchedExt GUI Manager",
+    "Limine-snapper-restore"
+  ],
+  "calc": [
+    "Calculator",
+    "Heroic Games Launcher",
+    "LibreOffice Calc"
+  ],
+  "chr": [
+    "CachyOS Kernel Manager",
+    "CachyOS Package Installer",
+    "LibreOffice Calc",
+    "SchedExt GUI Manager",
+    "KDE Connect"
+  ],
+  "hel": [
+    "Helium Browser",
+    "Heroic Games Launcher",
+    "Hardware Locality lstopo",
+    "Shelly",
+    "CachyOS Hello"
+  ],
+  "aud": [
+    "Volume Control",
+    "mpv Media Player",
+    "rmpc",
+    "Goverlay"
+  ],
+  "mus": [
+    "rmpc",
+    "Upscayl",
+    "LibreOffice Draw",
+    "Volume Control"
+  ],
+  "play": [
+    "mpv Media Player",
+    "rmpc",
+    "Volume Control"
+  ],
+  "shot": [
+    "Limine-snapper-restore",
+    "KDE Connect"
+  ],
+  "text": [
+    "Antigravity IDE",
+    "Micro",
+    "Neovim",
+    "Vim",
+    "KDE Connect SMS"
+  ],
+  "anti": [
+    "Antigravity IDE",
+    "Advanced Network Configuration",
+    "LibreOffice Calc"
+  ]
+}

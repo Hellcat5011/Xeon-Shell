@@ -12,7 +12,7 @@ Xeon Shell provides a comprehensive set of built-in tools and menus to keep your
 - **Desktop Widgets & Wallpaper Depth**: Clock, calendar, and media controls featuring neural depth masking that seamlessly places widgets behind wallpaper elements.
 - **App Launcher**: Quickly find and launch your applications.
 - **Control Center & Notifications**: Manage system notifications, volume/brightness sliders, and quick toggles.
-- **Workspace Overview**: Interactive visual workspace overview displaying active windows across all Hyprland workspaces.
+- **Workspace Overview**: Interactive visual workspace overview displaying active windows across all Hyprland workspaces. Drag open apps between workspaces directly from the overview.
 - **Window Switcher (Alt-Tab)**: Fast keyboard-driven application switcher with live window previews.
 - **Settings GUI**: Centralized preferences for wallpaper selection, neural depth estimation (CPU/GPU), lock screen, greeter, and widgets.
 - **Keybindings Cheatsheet**: Quick visual reference overlay for Hyprland and shell shortcuts.
@@ -24,6 +24,7 @@ Xeon Shell provides a comprehensive set of built-in tools and menus to keep your
 - **Clipboard Manager**: A full, lightweight clipboard manager written entirely in QML (no reliance on `cliphist`).
 - **Screenshot & Screen Record Utility**: Capture and record your screen effortlessly.
 - **Lockscreen & Greeter**: Custom lockscreen and `greetd` login greeter interface featuring PAM authentication.
+- **OSD**: A simple OSD for brightness or volume changes.
 
 ## 📸 Screenshots
 

@@ -1,0 +1,18 @@
+{
+  "😀": ["happy", "smile"],
+  "😂": ["lol", "lmao", "rofl", "crying"],
+  "🤣": ["rofl", "lmao", "lol"],
+  "👍": ["ok", "nice", "yes", "cool"],
+  "🙏": ["thanks", "thank you", "thx", "please", "pls"],
+  "💀": ["dead", "bruh", "rip", "skull"],
+  "🔥": ["fire", "lit", "hot"],
+  "🎉": ["gg", "party", "congrats", "celebrate"],
+  "🫡": ["o7", "respect", "salute"],
+  "🤦": ["facepalm", "smh"],
+  "🤷": ["idk", "shrug"],
+  "✨": ["sparkle", "magic", "aesthetic"],
+  "💩": ["poop", "crap", "wtf"],
+  "👀": ["look", "eyes", "sus"],
+  "🏃": ["brb", "gtg", "run"],
+  "😴": ["gn", "sleep", "tired"]
+}

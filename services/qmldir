@@ -8,3 +8,4 @@ singleton DesktopLayout 1.0 DesktopLayout.qml
 singleton HyprlandService 1.0 HyprlandService.qml
 singleton DepthService 1.0 DepthService.qml
 BlueLightFilter 1.0 BlueLightFilter.qml
+singleton Fuzzy 1.0 Fuzzy.qml

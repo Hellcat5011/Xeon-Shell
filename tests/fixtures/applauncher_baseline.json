@@ -1,0 +1,298 @@
+{
+  "f": [
+    {
+      "name": "Foot",
+      "score": 30.6
+    },
+    {
+      "name": "Files",
+      "score": 30.5
+    },
+    {
+      "name": "Firefox",
+      "score": 30.3
+    },
+    {
+      "name": "FileZilla",
+      "score": 30.1
+    },
+    {
+      "name": "Disk Usage Analyzer",
+      "score": 15.3
+    }
+  ],
+  "ff": [
+    {
+      "name": "Firefox",
+      "score": 11.3
+    },
+    {
+      "name": "Wireshark",
+      "score": 2.88
+    }
+  ],
+  "fir": [
+    {
+      "name": "Firefox",
+      "score": 40.3
+    },
+    {
+      "name": "Files",
+      "score": 12.64
+    },
+    {
+      "name": "Settings",
+      "score": 2.85
+    },
+    {
+      "name": "Wireshark",
+      "score": 0.47999999999999976
+    }
+  ],
+  "term": [
+    {
+      "name": "Alacritty",
+      "score": 35.44
+    },
+    {
+      "name": "Kitty",
+      "score": 35.44
+    },
+    {
+      "name": "Ghostty",
+      "score": 35.44
+    },
+    {
+      "name": "Foot",
+      "score": 22.6
+    },
+    {
+      "name": "Telegram Desktop",
+      "score": 16.4
+    }
+  ],
+  "gho": [
+    {
+      "name": "Ghostty",
+      "score": 40.3
+    },
+    {
+      "name": "Inkscape",
+      "score": 8.64
+    }
+  ],
+  "code": [
+    {
+      "name": "Visual Studio Code",
+      "score": 35.92
+    },
+    {
+      "name": "Kate",
+      "score": 22.8
+    },
+    {
+      "name": "Antigravity IDE",
+      "score": 22.8
+    },
+    {
+      "name": "OBS Studio",
+      "score": 4
+    }
+  ],
+  "file": [
+    {
+      "name": "Files",
+      "score": 45.5
+    },
+    {
+      "name": "FileZilla",
+      "score": 45.1
+    },
+    {
+      "name": "Disk Usage Analyzer",
+      "score": 22.8
+    },
+    {
+      "name": "Wireshark",
+      "score": 1.2799999999999998
+    }
+  ],
+  "naut": [
+    {
+      "name": "Files",
+      "score": 22.6
+    },
+    {
+      "name": "Screenshot",
+      "score": 9.68
+    },
+    {
+      "name": "Alacritty",
+      "score": 5.04
+    },
+    {
+      "name": "Ghostty",
+      "score": 5.04
+    },
+    {
+      "name": "Kitty",
+      "score": 5.04
+    }
+  ],
+  "set": [
+    {
+      "name": "Settings",
+      "score": 40.2
+    },
+    {
+      "name": "Screenshot",
+      "score": 12
+    },
+    {
+      "name": "System Monitor",
+      "score": 11.6
+    },
+    {
+      "name": "Inkscape",
+      "score": 8.64
+    },
+    {
+      "name": "Wireshark",
+      "score": 8.1
+    }
+  ],
+  "calc": [
+    {
+      "name": "Calculator",
+      "score": 45
+    },
+    {
+      "name": "Heroic Games Launcher",
+      "score": 11.9
+    }
+  ],
+  "chr": [
+    {
+      "name": "Chromium",
+      "score": 40.2
+    },
+    {
+      "name": "Heroic Games Launcher",
+      "score": 4.4799999999999995
+    },
+    {
+      "name": "Inkscape",
+      "score": 0.6399999999999999
+    }
+  ],
+  "hel": [
+    {
+      "name": "Helium",
+      "score": 40.4
+    },
+    {
+      "name": "Heroic Games Launcher",
+      "score": 24.9
+    },
+    {
+      "name": "Foot",
+      "score": 5.25
+    },
+    {
+      "name": "Kitty",
+      "score": 5.25
+    },
+    {
+      "name": "Alacritty",
+      "score": 5.25
+    }
+  ],
+  "aud": [
+    {
+      "name": "Audacity",
+      "score": 40.2
+    },
+    {
+      "name": "Music",
+      "score": 20.25
+    },
+    {
+      "name": "VLC media player",
+      "score": 20.25
+    },
+    {
+      "name": "Visual Studio Code",
+      "score": 5.2
+    }
+  ],
+  "mus": [
+    {
+      "name": "Music",
+      "score": 40.5
+    },
+    {
+      "name": "Audacity",
+      "score": 20.25
+    }
+  ],
+  "play": [
+    {
+      "name": "VLC media player",
+      "score": 24.4
+    },
+    {
+      "name": "Heroic Games Launcher",
+      "score": 22.8
+    },
+    {
+      "name": "Steam",
+      "score": 22.8
+    },
+    {
+      "name": "Lutris",
+      "score": 22.8
+    },
+    {
+      "name": "Music",
+      "score": 22.7
+    }
+  ],
+  "shot": [
+    {
+      "name": "Screenshot",
+      "score": 22.8
+    }
+  ],
+  "text": [
+    {
+      "name": "Text Editor",
+      "score": 44.9
+    },
+    {
+      "name": "Kate",
+      "score": 22.8
+    }
+  ],
+  "anti": [
+    {
+      "name": "Antigravity IDE",
+      "score": 44.5
+    },
+    {
+      "name": "Kate",
+      "score": 17.6
+    },
+    {
+      "name": "Blender",
+      "score": 10.55
+    },
+    {
+      "name": "Foot",
+      "score": 9.920000000000002
+    },
+    {
+      "name": "Text Editor",
+      "score": 9.840000000000002
+    }
+  ]
+}

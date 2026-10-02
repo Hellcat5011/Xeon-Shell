@@ -61,6 +61,10 @@ ShellRoot {
         id: clipboardManager
     }
 
+    Modules.EmojiPicker {
+        id: emojiPicker
+    }
+
     Modules.PowerMenu {
         id: powerMenu
     }
@@ -243,6 +247,25 @@ ShellRoot {
         function toggle(): void { clipboardManager.toggle() }
         function open(): void { clipboardManager.show() }
         function close(): void { clipboardManager.hide() }
+    }
+
+    IpcHandler {
+        target: "emoji"
+        function toggle(): void { emojiPicker.toggle() }
+        function open(): void { emojiPicker.show() }
+        function close(): void { emojiPicker.hide() }
+        function debugSelect(glyph: string, mode: string): void {
+            if (Quickshell.env("XEON_EMOJI_DEBUG") !== "1") return;
+            emojiPicker.debugSelect(glyph, mode);
+        }
+        function debugGetRecents(): string {
+            if (Quickshell.env("XEON_EMOJI_DEBUG") !== "1") return "[]";
+            return JSON.stringify(emojiPicker.rawRecentGlyphs);
+        }
+        function debugGetRecentEmojis(): string {
+            if (Quickshell.env("XEON_EMOJI_DEBUG") !== "1") return "[]";
+            return JSON.stringify(emojiPicker.recentEmojis.map(e => e.emoji));
+        }
     }
 
     IpcHandler {

@@ -72,38 +72,7 @@ OverlayWindow {
     }
 
     function fuzzyScore(query, text) {
-        if (!text) return -1;
-        query = query.toLowerCase();
-        text = text.toLowerCase();
-        if (query.length === 0) return 0;
-        
-        let qIdx = 0;
-        let tIdx = 0;
-        let score = 0;
-        let lastMatchIdx = -2;
-        
-        while (qIdx < query.length && tIdx < text.length) {
-            if (query[qIdx] === text[tIdx]) {
-                if (lastMatchIdx === tIdx - 1) {
-                    score += 5; // contiguous match
-                } else {
-                    score += 1;
-                }
-                if (tIdx === 0 || text[tIdx - 1] === ' ' || text[tIdx - 1] === '-') {
-                    score += 10; // word boundary
-                }
-                lastMatchIdx = tIdx;
-                qIdx++;
-            }
-            tIdx++;
-        }
-        
-        if (qIdx === query.length) {
-            score -= text.length * 0.1; // penalize longer strings
-            if (text.startsWith(query)) score += 20;
-            return score;
-        }
-        return -1;
+        return Fuzzy.scoreLegacy(query, text);
     }
 
     function applyFilter() {

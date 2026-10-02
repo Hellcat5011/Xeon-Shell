@@ -38,9 +38,13 @@ PanelWindow {
     // Any child items written inside `OverlayWindow { … }` land here.
     default property alias content: card.data
 
-    function show()   { root.shown = true  }
-    function hide()   { root.shown = false }
-    function toggle() { root.shown = !root.shown }
+    function show()    { root.shown = true  }
+    function hide()    { root.shown = false }
+    function hideNow() {
+        root.shown = false;
+        closingTimer.stop();
+    }
+    function toggle()  { root.shown = !root.shown }
 
     // ---- Wayland layer-shell plumbing ------------------------------------
     WlrLayershell.layer: WlrLayer.Overlay
