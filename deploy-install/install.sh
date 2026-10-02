@@ -152,6 +152,8 @@ if [ "$REPO_DIR" != "$TARGET_DIR" ]; then
         --exclude '.git' \
         --exclude '.gitignore' \
         --exclude '__pycache__' \
+        --exclude 'assets' \
+        --exclude 'README.md' \
         "$REPO_DIR/" "$TARGET_DIR/"
 else
     echo "Config directory is current repository: $TARGET_DIR"
