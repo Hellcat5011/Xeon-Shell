@@ -10,7 +10,7 @@ Rectangle {
     // Eww config: border-radius: 10px
     radius: 10
 
-    // Solid background using 60% opacity inverse primary (transparent if transparentBg is true)
-    color: transparentBg ? "transparent" : Qt.rgba(Theme.inversePrimary.r, Theme.inversePrimary.g, Theme.inversePrimary.b, 0.60)
+    // Solid background using configurable background opacity inverse primary (transparent if transparentBg is true)
+    color: transparentBg ? "transparent" : Qt.rgba(Theme.inversePrimary.r, Theme.inversePrimary.g, Theme.inversePrimary.b, Config.backgroundOpacity)
     layer.enabled: !transparentBg
 }

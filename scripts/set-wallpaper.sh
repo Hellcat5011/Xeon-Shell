@@ -2,13 +2,14 @@
 # set-wallpaper.sh — set the wallpaper, then regenerate the Material You
 # theme so the launcher's colors follow it.
 #
-# Usage: set-wallpaper.sh /path/to/image.jpg
+# Usage: set-wallpaper.sh /path/to/image.jpg [daemon] [scheme]
 # Called automatically by WallpaperSelector.qml — you generally don't
 # need to run this by hand, but it's a plain script so you can.
 set -euo pipefail
 
-WALLPAPER="${1:?usage: set-wallpaper.sh <image path> [daemon]}"
+WALLPAPER="${1:?usage: set-wallpaper.sh <image path> [daemon] [scheme]}"
 DAEMON="${2:-awww}"
+SCHEME="${3:-scheme-smart}"
 
 if [ "$DAEMON" = "awww" ]; then
   if ! command -v awww >/dev/null 2>&1; then
@@ -55,7 +56,7 @@ fi
 if command -v matugen >/dev/null 2>&1; then
   # Regenerates every template configured in ~/.config/matugen/config.toml,
   # including data/colors.json that Theme.qml is watching.
-  matugen image "$WALLPAPER" -m dark -t scheme-smart --source-color-index 0
+  matugen image "$WALLPAPER" -m dark -t "$SCHEME" --source-color-index 0
   
   # Save the current wallpaper path for the App Launcher
   echo "$WALLPAPER" > "$(dirname "$0")/../data/current-wallpaper.txt"

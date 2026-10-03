@@ -27,7 +27,7 @@ PanelWindow {
     property int  panelHeight: 420
     property int  cardRadius:  Config.windowRadius
     property string anchorPos: "center"
-    property color cardColor: Qt.rgba(Theme.inversePrimary.r, Theme.inversePrimary.g, Theme.inversePrimary.b, 0.65)
+    property color cardColor: Qt.rgba(Theme.inversePrimary.r, Theme.inversePrimary.g, Theme.inversePrimary.b, Config.backgroundOpacity)
     property bool hasBorder: false
     property string enterAnimation: "scale"
 

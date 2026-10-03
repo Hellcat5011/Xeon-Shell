@@ -64,7 +64,7 @@ PanelWindow {
         height: 64
         radius: Theme.radiusSmall
 
-        color: Qt.rgba(Theme.inversePrimary.r, Theme.inversePrimary.g, Theme.inversePrimary.b, 0.65)
+        color: Qt.rgba(Theme.inversePrimary.r, Theme.inversePrimary.g, Theme.inversePrimary.b, Config.backgroundOpacity)
         border.width: 1
         border.color: Theme.inversePrimary
         layer.enabled: true

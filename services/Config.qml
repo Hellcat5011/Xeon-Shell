@@ -55,6 +55,8 @@ Item {
     property alias globalFont: settings.globalFont
     property alias windowRadius: settings.windowRadius
     property alias windowRadiusManual: settings.windowRadiusManual
+    property alias backgroundOpacity: settings.backgroundOpacity
+    property alias matugenScheme: settings.matugenScheme
 
     // Draft values — the Settings UI edits these. They do not affect the
     // shell's live behavior until save() is called.
@@ -85,6 +87,8 @@ Item {
     property string draftDepthDevice: "cpu"
     property int    draftWindowRadius: 24
     property bool   draftWindowRadiusManual: false
+    property real   draftBackgroundOpacity: 0.65
+    property string draftMatugenScheme: "scheme-smart"
 
     // True if any draft differs from its corresponding live value.
     readonly property bool isDirty:
@@ -114,7 +118,9 @@ Item {
         draftDepthDevice !== depthDevice ||
         draftGlobalFont !== globalFont ||
         draftWindowRadius !== windowRadius ||
-        draftWindowRadiusManual !== windowRadiusManual
+        draftWindowRadiusManual !== windowRadiusManual ||
+        draftBackgroundOpacity !== backgroundOpacity ||
+        draftMatugenScheme !== matugenScheme
 
     function save() {
         let needsRestart = false;
@@ -149,6 +155,8 @@ Item {
         globalFont = draftGlobalFont
         windowRadius = draftWindowRadius
         windowRadiusManual = draftWindowRadiusManual
+        backgroundOpacity = draftBackgroundOpacity
+        matugenScheme = draftMatugenScheme
 
         if (needsRestart) {
             restartProcess.running = true;
@@ -183,6 +191,8 @@ Item {
         draftGlobalFont = globalFont
         draftWindowRadius = windowRadius
         draftWindowRadiusManual = windowRadiusManual
+        draftBackgroundOpacity = backgroundOpacity
+        draftMatugenScheme = matugenScheme
     }
 
     Settings {
@@ -228,5 +238,7 @@ Item {
         property string globalFont: "System Default"
         property int windowRadius: 24
         property bool windowRadiusManual: false
+        property real backgroundOpacity: 0.65
+        property string matugenScheme: "scheme-smart"
     }
 }

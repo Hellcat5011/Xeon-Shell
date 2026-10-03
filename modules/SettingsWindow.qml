@@ -25,6 +25,33 @@ OverlayWindow {
     readonly property bool screenshotDirty: draftSsDir !== ssDir || draftRecDir !== recDir
     readonly property bool hasUnsavedChanges: Config.isDirty || screenshotDirty
 
+    readonly property real minBackgroundOpacity: 0.2
+
+    readonly property var matugenSchemeLabels: [
+        "Smart",
+        "Tonal Spot",
+        "Expressive",
+        "Fruit Salad",
+        "Vibrant",
+        "Rainbow",
+        "Neutral",
+        "Fidelity",
+        "Content",
+        "Monochrome"
+    ]
+    readonly property var matugenSchemeValues: [
+        "scheme-smart",
+        "scheme-tonal-spot",
+        "scheme-expressive",
+        "scheme-fruit-salad",
+        "scheme-vibrant",
+        "scheme-rainbow",
+        "scheme-neutral",
+        "scheme-fidelity",
+        "scheme-content",
+        "scheme-monochrome"
+    ]
+
     function show() {
         if (editModeActive) return;
         root.shown = true;
@@ -139,20 +166,28 @@ OverlayWindow {
         "Lock Screen Lockscreen Power Menu Allow session control actions (Suspend, Reboot, Shutdown) directly from the lockscreen. Lockscreen Alignment Position the lockscreen elements aligned to the left or right edge of the screen.",
         "Greeter Remember Last User Save the last logged-in user and session to automatically pre-select them on the next boot.",
         "Display Global font Select a global font for the shell and desktop widgets. Manage idle behavior Automatically lock the screen when the system is idle. Lock timeout Time in minutes before the screen is locked. Blue Light Filter Toggle the blue light filter (night light). Turn on now Manually force the blue light filter on. Mode Fixed Time, Sunset/Sunrise Night Schedule Night starts Night ends The filter is active between these times Coordinates Use realtime location based on IP Transition Duration Time in minutes for the color temperature to transition. Day Temperature Color temperature during the day (K). Night Temperature Color temperature at night (K).",
-        "Desktop Desktop Edit Mode Reposition, resize, remove and re-add desktop widgets. Window Rounding Corner radius Manual rounding Set manual pixel number Set the rounding value for the UI",
-        "Screenshot Screenshot Directory The folder where screenshots are saved. Recording Directory The folder where screen recordings are saved."
+        "Desktop Desktop Edit Mode Reposition, resize, remove and re-add desktop widgets.",
+        "Screenshot Screenshot Directory The folder where screenshots are saved. Recording Directory The folder where screen recordings are saved.",
+        "UI Background Opacity Window Rounding Corner radius Manual rounding Set manual pixel number Set the rounding value for the UI Material You Scheme Variant Smart Tonal Spot Expressive Fruit Salad Vibrant Rainbow Neutral Fidelity Content Monochrome"
     ]
 
     function commitChanges(isFromPopup) {
         let needsGreeterSync = (Config.draftLockscreenAlignment !== Config.lockscreenAlignment) || (Config.draftRememberLastUser !== Config.rememberLastUser);
+        let schemeChanged = (Config.draftMatugenScheme !== Config.matugenScheme);
         Config.save();
         root.saveScreenshotConfig();
         
+        if (schemeChanged) {
+            themeProc.isPopup = isFromPopup;
+            themeProc.command = [Quickshell.shellDir + "/scripts/regenerate-theme.sh", Config.matugenScheme];
+            themeProc.running = true;
+        }
         if (needsGreeterSync) {
             applyProc.isPopup = isFromPopup;
-            applyProc.command = ["python3", Quickshell.shellDir + "/scripts/write-greeter-snapshot.py", "--alignment", Config.lockscreenAlignment, "--remember", (Config.rememberLastUser ? "true" : "false")]
+            applyProc.command = ["python3", Quickshell.shellDir + "/scripts/write-greeter-snapshot.py", "--alignment", Config.lockscreenAlignment, "--remember", (Config.rememberLastUser ? "true" : "false")];
             applyProc.running = true;
-        } else {
+        }
+        if (!needsGreeterSync && !schemeChanged) {
             if (isFromPopup) {
                 unsavedPopup.visible = false;
                 root.hide();
@@ -282,7 +317,7 @@ OverlayWindow {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
-                    model: ["Wallpaper", "Lock Screen", "Greeter", "Display", "Desktop", "Screenshot"]
+                    model: ["Wallpaper", "Lock Screen", "Greeter", "Display", "Desktop", "Screenshot", "UI"]
                     currentIndex: 0
                     
                     delegate: Item {
@@ -353,7 +388,7 @@ OverlayWindow {
                         Layout.fillWidth: true
                         
                         Text {
-                            text: "⚙  " + ["Wallpaper Settings", "Lock Screen Settings", "Greeter Settings", "Display Settings", "Desktop Settings", "Screenshot Settings"][tabList.currentIndex]
+                            text: "⚙  " + ["Wallpaper Settings", "Lock Screen Settings", "Greeter Settings", "Display Settings", "Desktop Settings", "Screenshot Settings", "UI Settings"][tabList.currentIndex]
                             color: Theme.onPrimaryContainerColor
                             font.pixelSize: 20
                             font.weight: Font.DemiBold
@@ -1354,6 +1389,177 @@ OverlayWindow {
                                         }
                                     }
                                 }
+                            }
+
+                            // ── PAGE 5: Screenshot ──
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 24
+                                visible: tabList.currentIndex === 5
+
+                                // Setting: Screenshot Directory
+                                RowLayout {
+                                    visible: root.fuzzyMatch(searchField.text, "Screenshot Directory The folder where screenshots are saved.")
+                                    Layout.fillWidth: true
+                                    spacing: 12
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 4
+                                        Text { text: "Screenshot Directory"; color: Theme.onPrimaryContainerColor; font.pixelSize: 15; font.weight: Font.Medium }
+                                        Text { text: "The folder where screenshots are saved."; color: Theme.onPrimaryContainerColor; opacity: 0.6; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                                    }
+
+                                    TextField {
+                                        id: ssDirField
+                                        Layout.preferredWidth: 220
+                                        Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                        text: root.draftSsDir
+                                        color: Theme.onPrimaryContainerColor
+                                        font.pixelSize: 14
+                                        leftPadding: 12; rightPadding: 12; topPadding: 8; bottomPadding: 8
+                                        selectByMouse: true
+                                        background: Rectangle {
+                                            color: Theme.primary; opacity: 0.1; radius: 20
+                                            border.width: 1; border.color: parent.activeFocus ? Theme.primary : Theme.outlineVariant
+                                        }
+                                        onTextEdited: root.draftSsDir = text
+                                        onEditingFinished: root.draftSsDir = text
+                                    }
+
+                                    Button {
+                                        id: ssDirFieldBrowse
+                                        enabled: !ssPickerProcess.running
+                                        Layout.alignment: Qt.AlignVCenter
+                                        onClicked: {
+                                            ssPickerProcess.command = ["zenity", "--file-selection", "--directory", "--title=Select Screenshot Folder", "--filename=" + root.draftSsDir + "/"];
+                                            ssPickerProcess.running = true;
+                                        }
+                                        contentItem: Text {
+                                            text: "📁"
+                                            font.pixelSize: 16
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+                                        background: Rectangle {
+                                            implicitWidth: 36
+                                            implicitHeight: 36
+                                            radius: 18
+                                            color: Theme.primary
+                                            opacity: ssDirFieldBrowse.down ? 0.3 : (ssDirFieldBrowse.hovered ? 0.4 : 0.2)
+                                            border.width: 1
+                                            border.color: Theme.primary
+                                            layer.enabled: true
+                                            Behavior on opacity { NumberAnimation { duration: 150 } }
+                                        }
+                                    }
+                                }
+
+                                // Setting: Recording Directory
+                                RowLayout {
+                                    visible: root.fuzzyMatch(searchField.text, "Recording Directory The folder where screen recordings are saved.")
+                                    Layout.fillWidth: true
+                                    spacing: 12
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 4
+                                        Text { text: "Recording Directory"; color: Theme.onPrimaryContainerColor; font.pixelSize: 15; font.weight: Font.Medium }
+                                        Text { text: "The folder where screen recordings are saved."; color: Theme.onPrimaryContainerColor; opacity: 0.6; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                                    }
+
+                                    TextField {
+                                        id: recDirField
+                                        Layout.preferredWidth: 220
+                                        Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                        text: root.draftRecDir
+                                        color: Theme.onPrimaryContainerColor
+                                        font.pixelSize: 14
+                                        leftPadding: 12; rightPadding: 12; topPadding: 8; bottomPadding: 8
+                                        selectByMouse: true
+                                        background: Rectangle {
+                                            color: Theme.primary; opacity: 0.1; radius: 20
+                                            border.width: 1; border.color: parent.activeFocus ? Theme.primary : Theme.outlineVariant
+                                        }
+                                        onTextEdited: root.draftRecDir = text
+                                        onEditingFinished: root.draftRecDir = text
+                                    }
+
+                                    Button {
+                                        id: recDirFieldBrowse
+                                        enabled: !recPickerProcess.running
+                                        Layout.alignment: Qt.AlignVCenter
+                                        onClicked: {
+                                            recPickerProcess.command = ["zenity", "--file-selection", "--directory", "--title=Select Recording Folder", "--filename=" + root.draftRecDir + "/"];
+                                            recPickerProcess.running = true;
+                                        }
+                                        contentItem: Text {
+                                            text: "📁"
+                                            font.pixelSize: 16
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+                                        background: Rectangle {
+                                            implicitWidth: 36
+                                            implicitHeight: 36
+                                            radius: 18
+                                            color: Theme.primary
+                                            opacity: recDirFieldBrowse.down ? 0.3 : (recDirFieldBrowse.hovered ? 0.4 : 0.2)
+                                            border.width: 1
+                                            border.color: Theme.primary
+                                            layer.enabled: true
+                                            Behavior on opacity { NumberAnimation { duration: 150 } }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // ── PAGE 6: UI ──
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 24
+                                visible: tabList.currentIndex === 6
+
+                                // Setting: Background Opacity Slider
+                                RowLayout {
+                                    visible: root.fuzzyMatch(searchField.text, "UI Background Opacity")
+                                    Layout.fillWidth: true
+                                    spacing: 16
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 4
+
+                                        Text {
+                                            text: "Background Opacity (" + Math.round(Config.draftBackgroundOpacity * 100) + "%)"
+                                            color: Theme.onPrimaryContainerColor
+                                            font.pixelSize: 15
+                                            font.weight: Font.Medium
+                                        }
+
+                                        Text {
+                                            text: "Adjust transparency of shell overlays and surfaces (20–100%)."
+                                            color: Theme.onPrimaryContainerColor
+                                            opacity: 0.6
+                                            font.pixelSize: 12
+                                            wrapMode: Text.WordWrap
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+
+                                    Slider {
+                                        id: backgroundOpacitySlider
+                                        Layout.preferredWidth: 160
+                                        Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                        from: root.minBackgroundOpacity
+                                        to: 1.0
+                                        stepSize: 0.01
+                                        value: Config.draftBackgroundOpacity
+                                        onValueChanged: {
+                                            Config.draftBackgroundOpacity = Math.round(value * 100) / 100
+                                        }
+                                    }
+                                }
 
                                 // Setting: Window Rounding Slider
                                 RowLayout {
@@ -1511,126 +1717,40 @@ OverlayWindow {
                                         }
                                     }
                                 }
-                            }
 
-                            // ── PAGE 5: Screenshot ──
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 24
-                                visible: tabList.currentIndex === 5
-
-                                // Setting: Screenshot Directory
+                                // Setting: Material You Scheme Variant
                                 RowLayout {
-                                    visible: root.fuzzyMatch(searchField.text, "Screenshot Directory The folder where screenshots are saved.")
+                                    visible: root.fuzzyMatch(searchField.text, "UI Material You Scheme Variant")
                                     Layout.fillWidth: true
-                                    spacing: 12
+                                    spacing: 16
 
                                     ColumnLayout {
                                         Layout.fillWidth: true
                                         spacing: 4
-                                        Text { text: "Screenshot Directory"; color: Theme.onPrimaryContainerColor; font.pixelSize: 15; font.weight: Font.Medium }
-                                        Text { text: "The folder where screenshots are saved."; color: Theme.onPrimaryContainerColor; opacity: 0.6; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+
+                                        Text {
+                                            text: "Material You Scheme"
+                                            color: Theme.onPrimaryContainerColor
+                                            font.pixelSize: 15
+                                            font.weight: Font.Medium
+                                        }
+
+                                        Text {
+                                            text: "Color generation palette variant derived from the current wallpaper."
+                                            color: Theme.onPrimaryContainerColor
+                                            opacity: 0.6
+                                            font.pixelSize: 12
+                                            wrapMode: Text.WordWrap
+                                            Layout.fillWidth: true
+                                        }
                                     }
 
-                                    TextField {
-                                        id: ssDirField
-                                        Layout.preferredWidth: 220
+                                    StyledComboBox {
                                         Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
-                                        text: root.draftSsDir
-                                        color: Theme.onPrimaryContainerColor
-                                        font.pixelSize: 14
-                                        leftPadding: 12; rightPadding: 12; topPadding: 8; bottomPadding: 8
-                                        selectByMouse: true
-                                        background: Rectangle {
-                                            color: Theme.primary; opacity: 0.1; radius: 20
-                                            border.width: 1; border.color: parent.activeFocus ? Theme.primary : Theme.outlineVariant
-                                        }
-                                        onTextEdited: root.draftSsDir = text
-                                        onEditingFinished: root.draftSsDir = text
-                                    }
-
-                                    Button {
-                                        id: ssDirFieldBrowse
-                                        enabled: !ssPickerProcess.running
-                                        Layout.alignment: Qt.AlignVCenter
-                                        onClicked: {
-                                            ssPickerProcess.command = ["zenity", "--file-selection", "--directory", "--title=Select Screenshot Folder", "--filename=" + root.draftSsDir + "/"];
-                                            ssPickerProcess.running = true;
-                                        }
-                                        contentItem: Text {
-                                            text: "📁"
-                                            font.pixelSize: 16
-                                            horizontalAlignment: Text.AlignHCenter
-                                            verticalAlignment: Text.AlignVCenter
-                                        }
-                                        background: Rectangle {
-                                            implicitWidth: 36
-                                            implicitHeight: 36
-                                            radius: 18
-                                            color: Theme.primary
-                                            opacity: ssDirFieldBrowse.down ? 0.3 : (ssDirFieldBrowse.hovered ? 0.4 : 0.2)
-                                            border.width: 1
-                                            border.color: Theme.primary
-                                            layer.enabled: true
-                                            Behavior on opacity { NumberAnimation { duration: 150 } }
-                                        }
-                                    }
-                                }
-
-                                // Setting: Recording Directory
-                                RowLayout {
-                                    visible: root.fuzzyMatch(searchField.text, "Recording Directory The folder where screen recordings are saved.")
-                                    Layout.fillWidth: true
-                                    spacing: 12
-
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 4
-                                        Text { text: "Recording Directory"; color: Theme.onPrimaryContainerColor; font.pixelSize: 15; font.weight: Font.Medium }
-                                        Text { text: "The folder where screen recordings are saved."; color: Theme.onPrimaryContainerColor; opacity: 0.6; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-                                    }
-
-                                    TextField {
-                                        id: recDirField
-                                        Layout.preferredWidth: 220
-                                        Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
-                                        text: root.draftRecDir
-                                        color: Theme.onPrimaryContainerColor
-                                        font.pixelSize: 14
-                                        leftPadding: 12; rightPadding: 12; topPadding: 8; bottomPadding: 8
-                                        selectByMouse: true
-                                        background: Rectangle {
-                                            color: Theme.primary; opacity: 0.1; radius: 20
-                                            border.width: 1; border.color: parent.activeFocus ? Theme.primary : Theme.outlineVariant
-                                        }
-                                        onTextEdited: root.draftRecDir = text
-                                        onEditingFinished: root.draftRecDir = text
-                                    }
-
-                                    Button {
-                                        id: recDirFieldBrowse
-                                        enabled: !recPickerProcess.running
-                                        Layout.alignment: Qt.AlignVCenter
-                                        onClicked: {
-                                            recPickerProcess.command = ["zenity", "--file-selection", "--directory", "--title=Select Recording Folder", "--filename=" + root.draftRecDir + "/"];
-                                            recPickerProcess.running = true;
-                                        }
-                                        contentItem: Text {
-                                            text: "📁"
-                                            font.pixelSize: 16
-                                            horizontalAlignment: Text.AlignHCenter
-                                            verticalAlignment: Text.AlignVCenter
-                                        }
-                                        background: Rectangle {
-                                            implicitWidth: 36
-                                            implicitHeight: 36
-                                            radius: 18
-                                            color: Theme.primary
-                                            opacity: recDirFieldBrowse.down ? 0.3 : (recDirFieldBrowse.hovered ? 0.4 : 0.2)
-                                            border.width: 1
-                                            border.color: Theme.primary
-                                            layer.enabled: true
-                                            Behavior on opacity { NumberAnimation { duration: 150 } }
+                                        model: root.matugenSchemeLabels
+                                        currentIndex: Math.max(0, root.matugenSchemeValues.indexOf(Config.draftMatugenScheme))
+                                        onActivated: {
+                                            Config.draftMatugenScheme = root.matugenSchemeValues[currentIndex]
                                         }
                                     }
                                 }
@@ -1661,7 +1781,7 @@ OverlayWindow {
 
                         Button {
                             id: applyBtn
-                            text: applyProc.running ? "Saving..." : "Save"
+                            text: (applyProc.running || themeProc.running) ? "Saving..." : "Save"
                             onClicked: {
                                 root.commitChanges(false);
                             }
@@ -1715,13 +1835,15 @@ OverlayWindow {
                         
                         onExited: (code) => {
                             if (code === 0) {
-                                if (isPopup) {
-                                    unsavedPopup.visible = false;
-                                    root.hide();
-                                } else {
-                                    success = true;
-                                    resultMessage = "Settings saved.";
-                                    messageTimer.restart();
+                                if (!themeProc.running) {
+                                    if (isPopup) {
+                                        unsavedPopup.visible = false;
+                                        root.hide();
+                                    } else {
+                                        success = true;
+                                        resultMessage = "Settings saved.";
+                                        messageTimer.restart();
+                                    }
                                 }
                             } else {
                                 if (isPopup) {
@@ -1735,6 +1857,49 @@ OverlayWindow {
                                     } else {
                                         resultMessage = "Settings saved; greeter sync failed: " + resultMessage;
                                     }
+                                    messageTimer.restart();
+                                }
+                            }
+                        }
+                    }
+
+                    Process {
+                        id: themeProc
+                        property string lastError: ""
+                        property bool isPopup: false
+
+                        stdout: SplitParser {
+                            onRead: data => console.log("themeProc stdout:", data)
+                        }
+                        stderr: SplitParser {
+                            onRead: data => { themeProc.lastError = data; }
+                        }
+
+                        onStarted: {
+                            lastError = "";
+                            messageTimer.stop();
+                        }
+
+                        onExited: (code) => {
+                            if (code === 0) {
+                                Theme.forceReload();
+                                if (!applyProc.running) {
+                                    if (isPopup) {
+                                        unsavedPopup.visible = false;
+                                        root.hide();
+                                    } else {
+                                        applyProc.success = true;
+                                        applyProc.resultMessage = "Settings saved.";
+                                        messageTimer.restart();
+                                    }
+                                }
+                            } else {
+                                console.error("themeProc failed with code " + code + ": " + lastError);
+                                applyProc.success = false;
+                                if (isPopup) {
+                                    applyProc.resultMessage = "Theme regeneration failed: " + (lastError || ("exit code " + code));
+                                } else {
+                                    applyProc.resultMessage = "Settings saved; theme regeneration failed: " + (lastError || ("exit code " + code));
                                     messageTimer.restart();
                                 }
                             }
@@ -1813,7 +1978,7 @@ OverlayWindow {
                     
                     Button {
                         id: saveBtn
-                        text: (applyProc.isPopup && applyProc.running) ? "Saving..." : "Save"
+                        text: ((applyProc.isPopup && applyProc.running) || (themeProc.isPopup && themeProc.running)) ? "Saving..." : "Save"
                         onClicked: {
                             root.commitChanges(true);
                         }
