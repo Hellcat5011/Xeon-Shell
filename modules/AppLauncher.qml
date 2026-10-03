@@ -21,7 +21,6 @@ OverlayWindow {
     id: launcher
     panelWidth:  960
     panelHeight: 620
-    cardRadius:  0 // Remove all rounding for the launcher
 
     property string currentWallpaperPath: "file://" + Quickshell.env("HOME") + "/.wa-thumb.jpg"
 

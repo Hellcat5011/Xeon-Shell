@@ -97,7 +97,7 @@ PanelWindow {
         anchors.centerIn: parent
         width: 400
         height: mainCol.height + 40
-        radius: Theme.radiusLarge
+        radius: Config.windowRadius
         color: Theme.surface
         border.width: 1
         border.color: Theme.outlineVariant

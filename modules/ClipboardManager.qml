@@ -10,7 +10,6 @@ OverlayWindow {
     id: clipboard
     panelWidth:  800
     panelHeight: 600
-    cardRadius:  Theme.radiusLarge
     
     // Refresh when shown
     onShownChanged: {

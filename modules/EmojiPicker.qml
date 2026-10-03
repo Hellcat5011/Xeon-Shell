@@ -20,7 +20,6 @@ OverlayWindow {
     id: picker
     panelWidth:  740
     panelHeight: 520
-    cardRadius:  Theme.radiusLarge
     hasBorder:   true
 
     // ─────────────────────────────────────────────────────────────────────────

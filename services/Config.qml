@@ -53,6 +53,8 @@ Item {
     property alias depthFeather: settings.depthFeather
     property alias depthDevice: settings.depthDevice
     property alias globalFont: settings.globalFont
+    property alias windowRadius: settings.windowRadius
+    property alias windowRadiusManual: settings.windowRadiusManual
 
     // Draft values — the Settings UI edits these. They do not affect the
     // shell's live behavior until save() is called.
@@ -81,6 +83,8 @@ Item {
     property int    draftDepthThreshold: 30
     property int    draftDepthFeather: 8
     property string draftDepthDevice: "cpu"
+    property int    draftWindowRadius: 24
+    property bool   draftWindowRadiusManual: false
 
     // True if any draft differs from its corresponding live value.
     readonly property bool isDirty:
@@ -108,7 +112,9 @@ Item {
         draftDepthThreshold !== depthThreshold ||
         draftDepthFeather !== depthFeather ||
         draftDepthDevice !== depthDevice ||
-        draftGlobalFont !== globalFont
+        draftGlobalFont !== globalFont ||
+        draftWindowRadius !== windowRadius ||
+        draftWindowRadiusManual !== windowRadiusManual
 
     function save() {
         let needsRestart = false;
@@ -141,6 +147,8 @@ Item {
         depthFeather = draftDepthFeather
         depthDevice = draftDepthDevice
         globalFont = draftGlobalFont
+        windowRadius = draftWindowRadius
+        windowRadiusManual = draftWindowRadiusManual
 
         if (needsRestart) {
             restartProcess.running = true;
@@ -173,6 +181,8 @@ Item {
         draftDepthFeather = depthFeather
         draftDepthDevice = depthDevice
         draftGlobalFont = globalFont
+        draftWindowRadius = windowRadius
+        draftWindowRadiusManual = windowRadiusManual
     }
 
     Settings {
@@ -216,5 +226,7 @@ Item {
         property int depthFeather: 8
         property string depthDevice: "cpu"
         property string globalFont: "System Default"
+        property int windowRadius: 24
+        property bool windowRadiusManual: false
     }
 }

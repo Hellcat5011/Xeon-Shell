@@ -170,7 +170,7 @@ PanelWindow {
                 easing.overshoot: 2.0
             }
             
-            radius: 3
+            radius: Config.windowRadius
                 color: Qt.rgba(Theme.inversePrimary.r, Theme.inversePrimary.g, Theme.inversePrimary.b, 0.65)
                 border.width: model.urgency === NotificationUrgency.Critical ? 2 : 1
                 border.color: model.urgency === NotificationUrgency.Critical ? Theme.error : Theme.inversePrimary

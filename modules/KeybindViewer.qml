@@ -18,7 +18,6 @@ OverlayWindow {
 
     panelWidth:  width > 0 ? Math.min(width * 0.82, 1400) : 1200
     panelHeight: height > 0 ? height * 0.78 : 700
-    cardRadius: Theme.radiusLarge
 
     // ── File reader ──────────────────────────────────────────────────────
     property string rawContent: ""

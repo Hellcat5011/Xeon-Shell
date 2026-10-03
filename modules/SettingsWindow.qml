@@ -9,7 +9,6 @@ OverlayWindow {
     id: root
     panelWidth: 860
     panelHeight: 620
-    cardRadius: Theme.radiusLarge
     hasBorder: true
 
     property bool editModeActive: false
@@ -140,7 +139,7 @@ OverlayWindow {
         "Lock Screen Lockscreen Power Menu Allow session control actions (Suspend, Reboot, Shutdown) directly from the lockscreen. Lockscreen Alignment Position the lockscreen elements aligned to the left or right edge of the screen.",
         "Greeter Remember Last User Save the last logged-in user and session to automatically pre-select them on the next boot.",
         "Display Global font Select a global font for the shell and desktop widgets. Manage idle behavior Automatically lock the screen when the system is idle. Lock timeout Time in minutes before the screen is locked. Blue Light Filter Toggle the blue light filter (night light). Turn on now Manually force the blue light filter on. Mode Fixed Time, Sunset/Sunrise Night Schedule Night starts Night ends The filter is active between these times Coordinates Use realtime location based on IP Transition Duration Time in minutes for the color temperature to transition. Day Temperature Color temperature during the day (K). Night Temperature Color temperature at night (K).",
-        "Desktop Desktop Edit Mode Reposition, resize, remove and re-add desktop widgets.",
+        "Desktop Desktop Edit Mode Reposition, resize, remove and re-add desktop widgets. Window Rounding Corner radius Manual rounding Set manual pixel number Set the rounding value for the UI",
         "Screenshot Screenshot Directory The folder where screenshots are saved. Recording Directory The folder where screen recordings are saved."
     ]
 
@@ -1300,6 +1299,7 @@ OverlayWindow {
                                 visible: tabList.currentIndex === 4
 
                                 RowLayout {
+                                    visible: root.fuzzyMatch(searchField.text, "Desktop Edit Mode Reposition, resize, remove, and re-add desktop widgets.")
                                     Layout.fillWidth: true
                                     spacing: 16
 
@@ -1351,6 +1351,163 @@ OverlayWindow {
                                             border.color: Theme.primary
                                             layer.enabled: true
                                             Behavior on opacity { NumberAnimation { duration: 150 } }
+                                        }
+                                    }
+                                }
+
+                                // Setting: Window Rounding Slider
+                                RowLayout {
+                                    visible: root.fuzzyMatch(searchField.text, "Window Rounding Corner radius")
+                                    Layout.fillWidth: true
+                                    enabled: !Config.draftWindowRadiusManual
+                                    opacity: enabled ? 1.0 : 0.4
+                                    spacing: 16
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 4
+
+                                        Text {
+                                            text: "Window Rounding (" + Config.draftWindowRadius + " px)"
+                                            color: Theme.onPrimaryContainerColor
+                                            font.pixelSize: 15
+                                            font.weight: Font.Medium
+                                        }
+
+                                        Text {
+                                            text: "Adjust corner rounding for all windows and overlay cards (0–24 px)."
+                                            color: Theme.onPrimaryContainerColor
+                                            opacity: 0.6
+                                            font.pixelSize: 12
+                                            wrapMode: Text.WordWrap
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+
+                                    Slider {
+                                        id: windowRadiusSlider
+                                        Layout.preferredWidth: 160
+                                        Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                        from: 0
+                                        to: 24
+                                        stepSize: 1
+                                        value: Math.min(Math.max(Config.draftWindowRadius, 0), 24)
+                                        onValueChanged: {
+                                            if (!Config.draftWindowRadiusManual) {
+                                                Config.draftWindowRadius = Math.round(value)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Setting: Window Rounding (Manual Checkbox)
+                                RowLayout {
+                                    visible: root.fuzzyMatch(searchField.text, "Window Rounding Manual rounding Set manual pixel number")
+                                    Layout.fillWidth: true
+
+                                    CheckBox {
+                                        id: manualRadiusCheckBox
+                                        Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
+                                        checked: Config.draftWindowRadiusManual
+                                        text: "Set manual pixel number"
+                                        font.pixelSize: 14
+                                        font.weight: Font.Medium
+                                        indicator: Rectangle {
+                                            implicitWidth: 22
+                                            implicitHeight: 22
+                                            radius: 6
+                                            color: manualRadiusCheckBox.checked ? Theme.primary : Qt.rgba(Theme.outlineVariant.r, Theme.outlineVariant.g, Theme.outlineVariant.b, 0.2)
+                                            border.color: manualRadiusCheckBox.checked ? Theme.primary : Theme.outlineVariant
+                                            border.width: 1
+
+                                            Text {
+                                                visible: manualRadiusCheckBox.checked
+                                                anchors.centerIn: parent
+                                                text: "✓"
+                                                color: Theme.primaryText
+                                                font.pixelSize: 13
+                                                font.bold: true
+                                            }
+                                        }
+                                        contentItem: Text {
+                                            text: manualRadiusCheckBox.text
+                                            font: manualRadiusCheckBox.font
+                                            color: Theme.onPrimaryContainerColor
+                                            verticalAlignment: Text.AlignVCenter
+                                            leftPadding: manualRadiusCheckBox.indicator.width + 10
+                                        }
+                                        onToggled: {
+                                            Config.draftWindowRadiusManual = checked
+                                            if (!checked && Config.draftWindowRadius > 24) {
+                                                Config.draftWindowRadius = 24
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Setting: Window Rounding (Manual Textbox Option)
+                                RowLayout {
+                                    visible: Config.draftWindowRadiusManual && root.fuzzyMatch(searchField.text, "Window Rounding Manual rounding Set the rounding value for the UI")
+                                    Layout.fillWidth: true
+                                    Layout.leftMargin: 32
+                                    spacing: 16
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 4
+
+                                        Text {
+                                            text: "Set the rounding value for the UI (px)"
+                                            color: Theme.onPrimaryContainerColor
+                                            font.pixelSize: 14
+                                            font.weight: Font.Medium
+                                        }
+
+                                        Text {
+                                            text: "Enter a custom pixel value for window rounding."
+                                            color: Theme.onPrimaryContainerColor
+                                            opacity: 0.6
+                                            font.pixelSize: 12
+                                            wrapMode: Text.WordWrap
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+
+                                    TextField {
+                                        id: manualRadiusField
+                                        Layout.preferredWidth: 80
+                                        Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                        text: Config.draftWindowRadius.toString()
+                                        validator: IntValidator { bottom: 0; top: 200 }
+                                        color: Theme.onPrimaryContainerColor
+                                        font.pixelSize: 14
+                                        horizontalAlignment: Text.AlignHCenter
+                                        leftPadding: 12; rightPadding: 12; topPadding: 8; bottomPadding: 8
+                                        background: Rectangle {
+                                            color: Theme.primary; opacity: 0.1; radius: 20
+                                            border.width: 1; border.color: parent.activeFocus ? Theme.primary : Theme.outlineVariant
+                                        }
+                                        onTextEdited: {
+                                            let val = parseInt(text);
+                                            if (!isNaN(val) && val >= 0) {
+                                                Config.draftWindowRadius = val;
+                                            }
+                                        }
+                                        onEditingFinished: {
+                                            let val = parseInt(text);
+                                            if (!isNaN(val) && val >= 0) {
+                                                Config.draftWindowRadius = val;
+                                            } else {
+                                                text = Config.draftWindowRadius.toString();
+                                            }
+                                        }
+                                        Connections {
+                                            target: root
+                                            function onVisibleChanged() {
+                                                if (root.visible) {
+                                                    manualRadiusField.text = Config.draftWindowRadius.toString();
+                                                }
+                                            }
                                         }
                                     }
                                 }

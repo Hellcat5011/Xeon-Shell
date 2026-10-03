@@ -25,7 +25,7 @@ PanelWindow {
     property bool shown:       false
     property int  panelWidth:  640
     property int  panelHeight: 420
-    property int  cardRadius:  Theme.radiusLarge
+    property int  cardRadius:  Config.windowRadius
     property string anchorPos: "center"
     property color cardColor: Qt.rgba(Theme.inversePrimary.r, Theme.inversePrimary.g, Theme.inversePrimary.b, 0.65)
     property bool hasBorder: false

@@ -15,7 +15,6 @@ OverlayWindow {
     panelHeight: 1000 // We can set this to screen height using anchors or let Wayland handle it.
     anchorPos: "left"
     enterAnimation: "slideLeft"
-    cardRadius: 3
     cardColor: Qt.rgba(Theme.inversePrimary.r, Theme.inversePrimary.g, Theme.inversePrimary.b, 0.65)
     hasBorder: true
 

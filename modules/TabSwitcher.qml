@@ -272,7 +272,7 @@ PanelWindow {
             anchors.centerIn: parent
             implicitWidth: root.visibleCount * root.cardW + Math.max(0, root.visibleCount - 1) * root.cardSpacing + 2 * root.padding
             implicitHeight: root.cardH + 2 * root.padding + (root.carousel ? 22 : 0)
-            radius: Theme.radiusLarge
+            radius: Config.windowRadius
             color: Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, 0.94)
             border.width: 1
             border.color: Theme.outlineVariant

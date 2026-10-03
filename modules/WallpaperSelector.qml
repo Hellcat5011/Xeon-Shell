@@ -27,7 +27,6 @@ OverlayWindow {
     WlrLayershell.namespace: "wallpaper"
     panelWidth:      picker.width
     panelHeight:     618
-    cardRadius:      Theme.radiusLarge
     cardTransparent: true
 
     property string wallpaperDir: Config.wallpaperDir.startsWith("~") ? (Quickshell.env("HOME") + Config.wallpaperDir.slice(1)) : Config.wallpaperDir

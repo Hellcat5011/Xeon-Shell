@@ -13,7 +13,6 @@ OverlayWindow {
     // 70% of screen width
     panelWidth: width > 0 ? width * 0.70 : 1344
     panelHeight: 340
-    cardRadius: Theme.radiusLarge
 
     property int selectedIndex: -1
 
