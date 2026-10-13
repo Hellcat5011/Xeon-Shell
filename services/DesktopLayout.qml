@@ -32,6 +32,21 @@ Item {
                typeof l[widgetId].h === "number";
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Shortcuts widget: which icons are shown. A missing key counts as enabled,
+    // so layouts saved before this existed (or with partial data) keep working.
+    // ─────────────────────────────────────────────────────────────
+    readonly property var shortcutKeys: ["launcher", "notifications", "settings", "power"]
+
+    function normalizeShortcuts(obj) {
+        let out = {};
+        for (let i = 0; i < shortcutKeys.length; i++) {
+            let k = shortcutKeys[i];
+            out[k] = !(obj && typeof obj === "object" && obj[k] === false);
+        }
+        return out;
+    }
+
     function getMinSize(widgetId) {
         switch (widgetId) {
             case "mpris":
@@ -42,6 +57,10 @@ Item {
                 return { width: 180, height: 90 };
             case "calendar":
                 return { width: 240, height: 220 };
+            case "analogclock":
+                return { width: 120, height: 120 };
+            case "shortcuts":
+                return { width: 48, height: 48 };
             default:
                 return { width: 50, height: 50 };
         }
@@ -113,6 +132,37 @@ Item {
                     isStored: false
                 };
             }
+            // Optional widgets: hidden by default, added from the "+" menu in edit mode
+            case "analogclock": {
+                let s = Math.min(sw, sh, 200);
+                return {
+                    x: Math.max(0, Math.min(sw - s, 30)),
+                    y: Math.max(0, Math.min(sh - s, 30)),
+                    w: s,
+                    h: s,
+                    visible: false,
+                    transparentBg: false,
+                    sendToBackground: false,
+                    fontFamily: "",
+                    isStored: false
+                };
+            }
+            case "shortcuts": {
+                let w = Math.min(sw, 240);
+                let h = Math.min(sh, 64);
+                return {
+                    x: Math.max(0, Math.min(sw - w, sw - 30 - w)),
+                    y: Math.max(0, Math.min(sh - h, 270)),
+                    w: w,
+                    h: h,
+                    visible: false,
+                    transparentBg: false,
+                    sendToBackground: false,
+                    fontFamily: "",
+                    shortcuts: normalizeShortcuts(null),
+                    isStored: false
+                };
+            }
             default:
                 return { x: 0, y: 0, w: Math.min(sw, 100), h: Math.min(sh, 100), visible: true, transparentBg: false, sendToBackground: false, fontFamily: "", isStored: false };
         }
@@ -144,6 +194,7 @@ Item {
                 sendToBackground: item.sendToBackground === true,
                 hideDate: item.hideDate === true,
                 fontFamily: (typeof item.fontFamily === "string") ? item.fontFamily : "",
+                shortcuts: normalizeShortcuts(item.shortcuts),
                 isStored: true
             };
         }
@@ -302,6 +353,28 @@ Item {
                 transparentBg: false,
                 sendToBackground: false,
                 fontFamily: ""
+            },
+            // Optional widgets: start removed, offered in the "+" menu
+            "analogclock": {
+                x: 30 / sw,
+                y: 30 / sh,
+                w: 200 / sw,
+                h: 200 / sh,
+                visible: false,
+                transparentBg: false,
+                sendToBackground: false,
+                fontFamily: ""
+            },
+            "shortcuts": {
+                x: (sw - 30 - 240) / sw,
+                y: 270 / sh,
+                w: 240 / sw,
+                h: 64 / sh,
+                visible: false,
+                transparentBg: false,
+                sendToBackground: false,
+                fontFamily: "",
+                shortcuts: normalizeShortcuts(null)
             }
         };
     }

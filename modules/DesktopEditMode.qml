@@ -71,7 +71,7 @@ Scope {
         let def = DesktopLayout.getDefaultWorkingLayout(sw, sh);
         let cur = DesktopLayout.currentLayout || {};
         let wl = {};
-        let ids = ["mpris", "tray", "clock", "calendar"];
+        let ids = ["mpris", "tray", "clock", "calendar", "analogclock", "shortcuts"];
 
         for (let i = 0; i < ids.length; i++) {
             let id = ids[i];
@@ -85,7 +85,8 @@ Scope {
                     transparentBg: cur[id].transparentBg === true,
                     sendToBackground: cur[id].sendToBackground === true,
                     hideDate: cur[id].hideDate === true,
-                    fontFamily: (typeof cur[id].fontFamily === "string") ? cur[id].fontFamily : ""
+                    fontFamily: (typeof cur[id].fontFamily === "string") ? cur[id].fontFamily : "",
+                    shortcuts: DesktopLayout.normalizeShortcuts(cur[id].shortcuts)
                 };
             } else {
                 wl[id] = {
@@ -93,11 +94,13 @@ Scope {
                     y: def[id].y,
                     w: def[id].w,
                     h: def[id].h,
-                    visible: true,
+                    // Optional widgets (analogclock, shortcuts) start removed
+                    visible: def[id].visible !== false,
                     transparentBg: false,
                     sendToBackground: false,
                     hideDate: def[id].hideDate === true,
-                    fontFamily: ""
+                    fontFamily: "",
+                    shortcuts: DesktopLayout.normalizeShortcuts(def[id].shortcuts)
                 };
             }
         }
@@ -181,6 +184,15 @@ Scope {
         root.layoutRevision++;
     }
 
+    // Shortcuts widget: show/hide one icon (key: launcher | notifications | settings | power)
+    function updateWidgetShortcut(id, key, val) {
+        if (!root.workingLayout[id]) return;
+        let sc = DesktopLayout.normalizeShortcuts(root.workingLayout[id].shortcuts);
+        sc[key] = val;
+        root.workingLayout[id].shortcuts = sc;
+        root.layoutRevision++;
+    }
+
     function removeWidget(id) {
         if (!root.workingLayout[id]) return;
         root.workingLayout[id].visible = false;
@@ -214,9 +226,11 @@ Scope {
             "mpris": "Media Player",
             "clock": "Clock",
             "calendar": "Calendar",
-            "tray": "Tray"
+            "tray": "Tray",
+            "analogclock": "Analog Clock",
+            "shortcuts": "Shortcuts"
         };
-        let ids = ["mpris", "clock", "calendar", "tray"];
+        let ids = ["mpris", "clock", "calendar", "tray", "analogclock", "shortcuts"];
         for (let i = 0; i < ids.length; i++) {
             let id = ids[i];
             if (root.workingLayout[id] && root.workingLayout[id].visible === false) {
@@ -312,9 +326,9 @@ Scope {
                         }
                     }
 
-                    // Repeater for the 4 editable widgets
+                    // Repeater for the 6 editable widgets
                     Repeater {
-                        model: ["mpris", "tray", "clock", "calendar"]
+                        model: ["mpris", "tray", "clock", "calendar", "analogclock", "shortcuts"]
 
                         delegate: Item {
                             id: widgetWrapper
@@ -326,11 +340,11 @@ Scope {
                             property var widgetData: {
                                 // Re-evaluate whenever the working layout is committed (drag/resize release, remove, restore)
                                 let dep = widgetWrapper.rev;
-                                let d = root.workingLayout[widgetId] || ({ x: 0, y: 0, w: 0.2, h: 0.15, visible: true, transparentBg: false, sendToBackground: false, hideDate: false, fontFamily: "" });
+                                let d = root.workingLayout[widgetId] || ({ x: 0, y: 0, w: 0.2, h: 0.15, visible: true, transparentBg: false, sendToBackground: false, hideDate: false, fontFamily: "", shortcuts: ({}) });
                                 // Return a NEW object each time. A var property only emits a change
                                 // signal when it gets a different object, and workingLayout[id] is
                                 // mutated in place, so returning it directly never notifies.
-                                return ({ x: d.x, y: d.y, w: d.w, h: d.h, vertical: d.vertical, visible: d.visible, transparentBg: d.transparentBg === true, sendToBackground: d.sendToBackground === true, hideDate: d.hideDate === true, fontFamily: (typeof d.fontFamily === "string") ? d.fontFamily : "" });
+                                return ({ x: d.x, y: d.y, w: d.w, h: d.h, vertical: d.vertical, visible: d.visible, transparentBg: d.transparentBg === true, sendToBackground: d.sendToBackground === true, hideDate: d.hideDate === true, fontFamily: (typeof d.fontFamily === "string") ? d.fontFamily : "", shortcuts: DesktopLayout.normalizeShortcuts(d.shortcuts) });
                             }
                             visible: widgetData.visible !== false
 
@@ -348,6 +362,8 @@ Scope {
                             // Committed geometry (pixels) derived from the working layout
                             // The tray's size and position come from its icon count (see DesktopLayout.computeTrayRect)
                             readonly property bool isTray: widgetId === "tray"
+                            // The analog clock face is a circle, so its box stays square when resized
+                            readonly property bool keepSquare: widgetId === "analogclock"
                             property var trayRect: isTray ? DesktopLayout.computeTrayRect(widgetData, root.trayPreviewCount, overlayWindow.screenW, overlayWindow.screenH) : null
 
                             property real baseW: isTray ? trayRect.w : Math.max(minW, Math.min(overlayWindow.screenW, Math.round((widgetData.w || 0.2) * overlayWindow.screenW)))
@@ -430,6 +446,8 @@ Scope {
                                             case "tray": return trayComp;
                                             case "clock": return clockComp;
                                             case "calendar": return calendarComp;
+                                            case "analogclock": return analogClockComp;
+                                            case "shortcuts": return shortcutsComp;
                                             default: return null;
                                         }
                                     }
@@ -472,6 +490,28 @@ Scope {
                                     interactive: false
                                     transparentBg: widgetWrapper.widgetData.transparentBg
                                     customFont: widgetWrapper.widgetData.fontFamily
+                                }
+                            }
+
+                            Component {
+                                id: analogClockComp
+                                DesktopAnalogClockContent {
+                                    interactive: false
+                                    editMode: true
+                                    running: widgetWrapper.visible
+                                    transparentBg: widgetWrapper.widgetData.transparentBg
+                                    customFont: widgetWrapper.widgetData.fontFamily
+                                }
+                            }
+
+                            Component {
+                                id: shortcutsComp
+                                DesktopShortcutsContent {
+                                    interactive: false
+                                    editMode: true
+                                    transparentBg: widgetWrapper.widgetData.transparentBg
+                                    customFont: widgetWrapper.widgetData.fontFamily
+                                    shortcuts: widgetWrapper.widgetData.shortcuts
                                 }
                             }
 
@@ -555,7 +595,9 @@ Scope {
                                 visible: root.openPopoverWidgetId === widgetId
                                 z: 200
                                 width: 270
-                                height: (widgetId === "clock" || widgetId === "tray") ? 232 : 180
+                                height: (widgetId === "clock" || widgetId === "tray") ? 232
+                                      : (widgetId === "shortcuts") ? 262
+                                      : (widgetId === "analogclock") ? 118 : 180
                                 radius: Theme.radiusSmall
                                 color: Qt.rgba(Theme.inversePrimary.r, Theme.inversePrimary.g, Theme.inversePrimary.b, 0.98)
                                 border.width: 1
@@ -646,8 +688,9 @@ Scope {
                                         }
                                     }
 
-                                    // 3. Font (All widgets)
+                                    // 3. Font (widgets that draw text; the analog clock and shortcuts don't)
                                     RowLayout {
+                                        visible: widgetId !== "analogclock" && widgetId !== "shortcuts"
                                         Layout.fillWidth: true
                                         spacing: 10
 
@@ -693,6 +736,70 @@ Scope {
                                                     root.updateWidgetFontFamily(widgetId, "");
                                                 } else {
                                                     root.updateWidgetFontFamily(widgetId, choice);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // 3b. Icons to show (Shortcuts widget only)
+                                    ColumnLayout {
+                                        visible: widgetId === "shortcuts"
+                                        Layout.fillWidth: true
+                                        spacing: 4
+
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: "Icons"
+                                            color: Theme.onPrimaryContainerColor
+                                            font.pixelSize: 12
+                                            font.weight: Font.Medium
+                                            elide: Text.ElideRight
+                                        }
+
+                                        Repeater {
+                                            model: [
+                                                { key: "launcher",      label: "App launcher" },
+                                                { key: "notifications", label: "Notifications" },
+                                                { key: "settings",      label: "Settings" },
+                                                { key: "power",         label: "Power" }
+                                            ]
+
+                                            delegate: CheckBox {
+                                                id: scCheck
+                                                Layout.fillWidth: true
+                                                implicitHeight: 24
+                                                padding: 0
+                                                spacing: 8
+                                                checked: widgetWrapper.widgetData.shortcuts[modelData.key] !== false
+                                                onToggled: root.updateWidgetShortcut(widgetId, modelData.key, scCheck.checked)
+
+                                                indicator: Rectangle {
+                                                    x: 0
+                                                    y: (scCheck.height - height) / 2
+                                                    implicitWidth: 18
+                                                    implicitHeight: 18
+                                                    radius: 4
+                                                    color: scCheck.checked ? Theme.primary : "transparent"
+                                                    border.width: 1.5
+                                                    border.color: scCheck.checked ? Theme.primary : Theme.onPrimaryContainerColor
+
+                                                    Text {
+                                                        anchors.centerIn: parent
+                                                        visible: scCheck.checked
+                                                        text: "✓"
+                                                        color: Theme.inversePrimary
+                                                        font.pixelSize: 12
+                                                        font.bold: true
+                                                    }
+                                                }
+
+                                                contentItem: Text {
+                                                    text: modelData.label
+                                                    leftPadding: scCheck.indicator.width + scCheck.spacing
+                                                    verticalAlignment: Text.AlignVCenter
+                                                    color: Theme.onPrimaryContainerColor
+                                                    font.pixelSize: 12
+                                                    font.weight: Font.Medium
                                                 }
                                             }
                                         }
@@ -896,6 +1003,14 @@ Scope {
                                         if (widgetWrapper.isTray) {
                                             // Drag right/down = bigger icons, left/up = smaller
                                             widgetWrapper.resizeTray((p.x - pressSceneX) + (p.y - pressSceneY));
+                                            return;
+                                        }
+                                        if (widgetWrapper.keepSquare) {
+                                            let maxS = Math.max(widgetWrapper.minW, Math.min(overlayWindow.screenW - widgetWrapper.x, overlayWindow.screenH - widgetWrapper.y));
+                                            let delta = ((p.x - pressSceneX) + (p.y - pressSceneY)) / 2;
+                                            let sz = Math.max(widgetWrapper.minW, Math.min(maxS, Math.round(widgetWrapper.baseW + delta)));
+                                            widgetWrapper.resizeDW = sz - widgetWrapper.baseW;
+                                            widgetWrapper.resizeDH = sz - widgetWrapper.baseH;
                                             return;
                                         }
                                         let maxW = Math.max(widgetWrapper.minW, overlayWindow.screenW - widgetWrapper.x);
