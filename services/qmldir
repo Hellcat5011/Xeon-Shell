@@ -9,3 +9,4 @@ singleton HyprlandService 1.0 HyprlandService.qml
 singleton DepthService 1.0 DepthService.qml
 BlueLightFilter 1.0 BlueLightFilter.qml
 singleton Fuzzy 1.0 Fuzzy.qml
+singleton NcNetwork 1.0 NcNetwork.qml
