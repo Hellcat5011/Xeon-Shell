@@ -69,7 +69,7 @@ Item {
                         });
                         
                         if (sinks[i].name === root.defaultSinkName) {
-                            root.currentVolume = parseInt(sinks[i].volume["front-left"].value_percent.replace("%", ""));
+                            root.currentVolume = Math.min(parseInt(sinks[i].volume["front-left"].value_percent.replace("%", "")), 100);
                         }
                     }
                     root.audioSinks = newSinks;

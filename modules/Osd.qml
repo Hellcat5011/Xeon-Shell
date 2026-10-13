@@ -51,7 +51,8 @@ PanelWindow {
     
     function showOsd(type, value) {
         root.osdType = type;
-        root.osdValue = parseInt(value) || 0;
+        let parsed = parseInt(value) || 0;
+        root.osdValue = (type === "volume") ? Math.min(parsed, 100) : parsed;
         root.shown = true;
         hideTimer.restart();
     }
