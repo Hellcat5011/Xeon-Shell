@@ -52,6 +52,9 @@ OverlayWindow {
         "scheme-monochrome"
     ]
 
+    readonly property var matugenModeLabels: ["Dark", "Light", "Smart"]
+    readonly property var matugenModeValues: ["dark", "light", "smart"]
+
     function show() {
         if (editModeActive) return;
         root.shown = true;
@@ -168,18 +171,19 @@ OverlayWindow {
         "Display Global font Select a global font for the shell and desktop widgets. Manage idle behavior Automatically lock the screen when the system is idle. Lock timeout Time in minutes before the screen is locked. Blue Light Filter Toggle the blue light filter (night light). Turn on now Manually force the blue light filter on. Mode Fixed Time, Sunset/Sunrise Night Schedule Night starts Night ends The filter is active between these times Coordinates Use realtime location based on IP Transition Duration Time in minutes for the color temperature to transition. Day Temperature Color temperature during the day (K). Night Temperature Color temperature at night (K).",
         "Desktop Desktop Edit Mode Reposition, resize, remove and re-add desktop widgets.",
         "Screenshot Screenshot Directory The folder where screenshots are saved. Recording Directory The folder where screen recordings are saved.",
-        "UI Background Opacity Window Rounding Corner radius Manual rounding Set manual pixel number Set the rounding value for the UI Material You Scheme Variant Smart Tonal Spot Expressive Fruit Salad Vibrant Rainbow Neutral Fidelity Content Monochrome"
+        "UI Background Opacity Window Rounding Corner radius Manual rounding Set manual pixel number Set the rounding value for the UI Material You Mode Dark Light Smart Material You Scheme Variant Tonal Spot Expressive Fruit Salad Vibrant Rainbow Neutral Fidelity Content Monochrome"
     ]
 
     function commitChanges(isFromPopup) {
         let needsGreeterSync = (Config.draftLockscreenAlignment !== Config.lockscreenAlignment) || (Config.draftRememberLastUser !== Config.rememberLastUser);
         let schemeChanged = (Config.draftMatugenScheme !== Config.matugenScheme);
+        let modeChanged = (Config.draftMatugenMode !== Config.matugenMode);
         Config.save();
         root.saveScreenshotConfig();
         
-        if (schemeChanged) {
+        if (schemeChanged || modeChanged) {
             themeProc.isPopup = isFromPopup;
-            themeProc.command = [Quickshell.shellDir + "/scripts/regenerate-theme.sh", Config.matugenScheme];
+            themeProc.command = [Quickshell.shellDir + "/scripts/regenerate-theme.sh", Config.matugenScheme, Config.matugenMode];
             themeProc.running = true;
         }
         if (needsGreeterSync) {
@@ -187,7 +191,7 @@ OverlayWindow {
             applyProc.command = ["python3", Quickshell.shellDir + "/scripts/write-greeter-snapshot.py", "--alignment", Config.lockscreenAlignment, "--remember", (Config.rememberLastUser ? "true" : "false")];
             applyProc.running = true;
         }
-        if (!needsGreeterSync && !schemeChanged) {
+        if (!needsGreeterSync && !schemeChanged && !modeChanged) {
             if (isFromPopup) {
                 unsavedPopup.visible = false;
                 root.hide();
@@ -1714,6 +1718,43 @@ OverlayWindow {
                                                     manualRadiusField.text = Config.draftWindowRadius.toString();
                                                 }
                                             }
+                                        }
+                                    }
+                                }
+
+                                // Setting: Material You Mode
+                                RowLayout {
+                                    visible: root.fuzzyMatch(searchField.text, "UI Material You Mode Dark Light Smart")
+                                    Layout.fillWidth: true
+                                    spacing: 16
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 4
+
+                                        Text {
+                                            text: "Material You Mode"
+                                            color: Theme.onPrimaryContainerColor
+                                            font.pixelSize: 15
+                                            font.weight: Font.Medium
+                                        }
+
+                                        Text {
+                                            text: "Color generation mode. Dark forces dark colors, Light forces light colors, Smart picks automatically."
+                                            color: Theme.onPrimaryContainerColor
+                                            opacity: 0.6
+                                            font.pixelSize: 12
+                                            wrapMode: Text.WordWrap
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+
+                                    StyledComboBox {
+                                        Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                        model: root.matugenModeLabels
+                                        currentIndex: Math.max(0, root.matugenModeValues.indexOf(Config.draftMatugenMode))
+                                        onActivated: {
+                                            Config.draftMatugenMode = root.matugenModeValues[currentIndex]
                                         }
                                     }
                                 }

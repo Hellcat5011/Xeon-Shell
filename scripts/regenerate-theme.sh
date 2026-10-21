@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # regenerate-theme.sh — apply a new Material You scheme variant.
 #
-# Usage: regenerate-theme.sh <scheme>      e.g. scheme-tonal-spot
+# Usage: regenerate-theme.sh <scheme> [mode]    e.g. scheme-tonal-spot dark
 #
 # Steps (in order; later steps only run if earlier ones succeed):
 #   1. Re-run matugen against the current wallpaper with the chosen scheme.
@@ -15,13 +15,23 @@
 #   XEON_NO_RESTART=1   skip step 3 (useful when testing from a terminal)
 set -euo pipefail
 
-SCHEME="${1:?usage: regenerate-theme.sh <scheme>}"
+SCHEME="${1:?usage: regenerate-theme.sh <scheme> [mode]}"
+MODE="${2:-smart}"
 
 # Scheme is interpolated into a sed expression below, so keep it strict.
 if ! [[ "$SCHEME" =~ ^[a-z0-9-]+$ ]]; then
     echo "regenerate-theme.sh: invalid scheme name '$SCHEME'." >&2
     exit 1
 fi
+
+# Mode must be one of the three values matugen supports.
+case "$MODE" in
+    dark|light|smart) ;;
+    *)
+        echo "regenerate-theme.sh: invalid mode '$MODE'. Must be dark, light, or smart." >&2
+        exit 1
+        ;;
+esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SHELL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -46,7 +56,7 @@ if [ -z "$WALLPAPER" ] || [ ! -f "$WALLPAPER" ]; then
     exit 1
 fi
 
-matugen image "$WALLPAPER" -m smart -t "$SCHEME" --source-color-index 0
+matugen image "$WALLPAPER" -m "$MODE" -t "$SCHEME" --source-color-index 0
 
 # ── 2. Persist the scheme as set-wallpaper.sh's default ────────────────
 if [ ! -f "$SET_WALLPAPER" ] || ! grep -qE '^SCHEME="\$\{3:-[^}]*\}"$' "$SET_WALLPAPER"; then

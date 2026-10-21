@@ -111,7 +111,7 @@ OverlayWindow {
     function applyWallpaper(path) {
         DepthService.wallpaperApplying(path)
         picker.applying = true
-        applyProcess.command = ["sh", Quickshell.shellDir + "/scripts/set-wallpaper.sh", path, Config.wallpaperDaemon, Config.matugenScheme]
+        applyProcess.command = ["sh", Quickshell.shellDir + "/scripts/set-wallpaper.sh", path, Config.wallpaperDaemon, Config.matugenScheme, Config.matugenMode]
         applyProcess.running  = true
     }
 

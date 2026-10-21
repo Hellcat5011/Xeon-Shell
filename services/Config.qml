@@ -57,6 +57,7 @@ Item {
     property alias windowRadiusManual: settings.windowRadiusManual
     property alias backgroundOpacity: settings.backgroundOpacity
     property alias matugenScheme: settings.matugenScheme
+    property alias matugenMode: settings.matugenMode
 
     // Draft values — the Settings UI edits these. They do not affect the
     // shell's live behavior until save() is called.
@@ -89,6 +90,7 @@ Item {
     property bool   draftWindowRadiusManual: false
     property real   draftBackgroundOpacity: 0.65
     property string draftMatugenScheme: "scheme-smart"
+    property string draftMatugenMode: "smart"
 
     // True if any draft differs from its corresponding live value.
     readonly property bool isDirty:
@@ -120,7 +122,8 @@ Item {
         draftWindowRadius !== windowRadius ||
         draftWindowRadiusManual !== windowRadiusManual ||
         draftBackgroundOpacity !== backgroundOpacity ||
-        draftMatugenScheme !== matugenScheme
+        draftMatugenScheme !== matugenScheme ||
+        draftMatugenMode !== matugenMode
 
     function save() {
         let needsRestart = false;
@@ -157,6 +160,7 @@ Item {
         windowRadiusManual = draftWindowRadiusManual
         backgroundOpacity = draftBackgroundOpacity
         matugenScheme = draftMatugenScheme
+        matugenMode = draftMatugenMode
 
         if (needsRestart) {
             restartProcess.running = true;
@@ -193,6 +197,7 @@ Item {
         draftWindowRadiusManual = windowRadiusManual
         draftBackgroundOpacity = backgroundOpacity
         draftMatugenScheme = matugenScheme
+        draftMatugenMode = matugenMode
     }
 
     Settings {
@@ -240,5 +245,6 @@ Item {
         property bool windowRadiusManual: false
         property real backgroundOpacity: 0.65
         property string matugenScheme: "scheme-smart"
+        property string matugenMode: "smart"
     }
 }
