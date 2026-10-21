@@ -12,6 +12,35 @@ Item {
     property string btBattery: ""
     property string btIcon: ""
     
+    // --- Battery State ---
+    property bool batteryPresent: false
+    property int  batteryPercent: 0
+    property bool batteryCharging: false
+
+    Process {
+        id: batteryProcess
+        command: ["sh", Quickshell.shellDir + "/scripts/get-battery.sh"]
+        stdout: SplitParser {
+            onRead: data => {
+                if (!data) return;
+                try {
+                    let j = JSON.parse(data);
+                    root.batteryPresent = j.present === true;
+                    root.batteryPercent = j.percent || 0;
+                    root.batteryCharging = j.charging === true;
+                } catch(e) {}
+            }
+        }
+    }
+
+    Timer {
+        interval: 30000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: batteryProcess.running = true
+    }
+
     // --- Idle State ---
     property bool caffeinateEnabled: false
 

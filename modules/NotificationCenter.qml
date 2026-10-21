@@ -85,6 +85,8 @@ OverlayWindow {
                 Layout.fillWidth: true
             }
 
+            NcBatteryIndicator {}
+
             Rectangle {
                 id: gearBtn
                 width: 32
