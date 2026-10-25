@@ -1,3 +1,2 @@
-global opacity adjustment > slider in settings window under UI
-move rounding adjustment to the new UI tab
-change matugen color scheme options from the UI tab and auto reload
+[DONE] once copied from the clipboard using wl-copy, delete the first entry on the clipboard as this is usually the previously copied item that has now also been placed into the first slot of the clipboard → Resolved via lock-file approach (qs-clipboard-self.lock) instead of deleting entries
+[DONE] check for security concerns with the clipboard → Resolved: 24h auto-expiry, sensitive-content filtering (passwords, card numbers, API keys, private keys, connection strings), image path validation, lock-file on all wl-copy sites

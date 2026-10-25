@@ -44,16 +44,26 @@ OverlayWindow {
         list.positionViewAtIndex(selectedIndex, ListView.Contain)
     }
 
+    // Path to the centralized copy helper
+    readonly property string copyScript: Quickshell.shellDir + "/scripts/clipboard-copy.sh"
+
     function copyItem(entry) {
         if (!entry) return
         if (entry.isImage) {
             const rawPath = entry.imagePath.replace("file://", "")
-            copyProcess.command = ["sh", "-c", "wl-copy -t image/png < " + rawPath]
+            // Validate path stays inside the clipboard image cache directory
+            const expectedPrefix = Quickshell.env("HOME") + "/.cache/quickshell-clipboard/images/"
+            if (!rawPath.startsWith(expectedPrefix)) {
+                console.warn("ClipboardManager: blocked image copy — path outside cache dir:", rawPath)
+                return
+            }
+            copyProcess.command = [copyScript, "image", rawPath]
             copyProcess.running = true
             clipboard.hide()
         } else {
+            // Pipe content via printf to clipboard-copy.sh stdin — no shell interpolation
             const safeContent = entry.content.replace(/'/g, "'\\''")
-            copyProcess.command = ["sh", "-c", "printf '%s' '" + safeContent + "' | wl-copy"]
+            copyProcess.command = ["sh", "-c", "printf '%s' '" + safeContent + "' | '" + copyScript + "' text"]
             copyProcess.running = true
             clipboard.hide()
         }

@@ -87,7 +87,12 @@ Column {
                 enabled: !line.isHeader
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: Quickshell.execDetached(["wl-copy", line.modelData.value])
+                onClicked: {
+                    const val = line.modelData.value.replace(/'/g, "'\\''")
+                    Quickshell.execDetached(["sh", "-c",
+                        "touch \"${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/qs-clipboard-self.lock\" && printf '%s' '" + val + "' | wl-copy"
+                    ])
+                }
             }
         }
     }

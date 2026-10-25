@@ -352,7 +352,11 @@ Singleton {
     function copyText(nid) {
         const s = _snaps[nid];
         if (!s) return;
-        Quickshell.execDetached(["wl-copy", s.bodyPlain !== "" ? s.bodyPlain : s.summary]);
+        const text = s.bodyPlain !== "" ? s.bodyPlain : s.summary;
+        const safeText = text.replace(/'/g, "'\\''");
+        Quickshell.execDetached(["sh", "-c",
+            "touch \"${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/qs-clipboard-self.lock\" && printf '%s' '" + safeText + "' | wl-copy"
+        ]);
     }
 
     // `tick` is unused; passing NotificationManager.clock re-evaluates callers' bindings.

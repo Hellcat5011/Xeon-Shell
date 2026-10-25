@@ -27,6 +27,9 @@ log_msg() {
 }
 
 # 1. Always copy to Wayland clipboard (redirect output so background pipes close cleanly)
+# Create lock file so the clipboard watcher skips this self-initiated copy
+LOCK_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/qs-clipboard-self.lock"
+touch "$LOCK_FILE"
 printf '%s' "$EMOJI" | wl-copy >/dev/null 2>&1
 
 # If copy-only requested, exit immediately

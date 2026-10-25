@@ -630,8 +630,8 @@ PanelWindow {
 
     function onScreenshotSaved(path) {
         root.captureInProgress = false
-        // Copy to clipboard
-        clipboardProcess.command = ["sh", "-c", "wl-copy -t image/png < '" + path + "'"]
+        // Copy to clipboard (with lock file to prevent duplicate history entry)
+        clipboardProcess.command = ["sh", "-c", "touch \"${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/qs-clipboard-self.lock\" && wl-copy -t image/png < '" + path + "'"]
         clipboardProcess.running = true
 
         // Send notification with preview
