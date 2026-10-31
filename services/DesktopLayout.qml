@@ -159,6 +159,7 @@ Item {
                     transparentBg: false,
                     sendToBackground: false,
                     fontFamily: "",
+                    vertical: false,
                     shortcuts: normalizeShortcuts(null),
                     isStored: false
                 };
@@ -195,6 +196,7 @@ Item {
                 hideDate: item.hideDate === true,
                 fontFamily: (typeof item.fontFamily === "string") ? item.fontFamily : "",
                 shortcuts: normalizeShortcuts(item.shortcuts),
+                vertical: (typeof item.vertical === "boolean") ? item.vertical : undefined,
                 isStored: true
             };
         }
@@ -374,6 +376,7 @@ Item {
                 transparentBg: false,
                 sendToBackground: false,
                 fontFamily: "",
+                vertical: false,
                 shortcuts: normalizeShortcuts(null)
             }
         };

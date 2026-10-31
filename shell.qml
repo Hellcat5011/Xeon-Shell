@@ -103,6 +103,22 @@ ShellRoot {
         id: desktopCalendar
     }
 
+    Modules.DesktopAnalogClock {
+        id: desktopAnalogClock
+    }
+
+    Modules.DesktopShortcuts {
+        id: desktopShortcuts
+        onShortcutTriggered: (key) => {
+            switch (key) {
+                case "launcher": appLauncher.toggle(); break;
+                case "notifications": notificationCenter.toggle(); break;
+                case "settings": settingsWindow.toggle(); break;
+                case "power": powerMenu.toggle(); break;
+            }
+        }
+    }
+
     Modules.KeybindViewer {
         id: keybindViewer
     }

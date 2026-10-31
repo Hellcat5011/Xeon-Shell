@@ -14,18 +14,23 @@ PanelWindow {
 
     readonly property var geom: DesktopLayout.getWidgetGeometry("shortcuts", DesktopLayout.screenWidth, DesktopLayout.screenHeight)
 
-    // Shortcut key -> IPC target handled in shell.qml
-    readonly property var ipcTargets: ({
-        launcher: "launcher",
-        notifications: "notif",
-        settings: "settings",
-        power: "power"
-    })
+    // Count enabled shortcuts directly from geom data (avoids a forward-reference
+    // to the child shortcutsContent, which hasn't been created yet when PanelWindow
+    // first evaluates its own `visible` binding — causing it to permanently stick at false).
+    readonly property int enabledShortcutCount: {
+        let sc = root.geom.shortcuts;
+        let keys = ["launcher", "notifications", "settings", "power"];
+        let n = 0;
+        for (let i = 0; i < keys.length; i++) {
+            if (!sc || sc[keys[i]] !== false) n++;
+        }
+        return n;
+    }
+
+    signal shortcutTriggered(string key)
 
     function trigger(key) {
-        let target = root.ipcTargets[key];
-        if (!target) return;
-        Quickshell.execDetached(["qs", "-p", Quickshell.shellDir, "ipc", "call", target, "toggle"]);
+        root.shortcutTriggered(key);
     }
 
     anchors {
@@ -41,9 +46,10 @@ PanelWindow {
     implicitWidth: Math.round(root.geom.w)
     implicitHeight: Math.round(root.geom.h)
 
-    // Optional widget: hidden until added from the "+" menu in edit mode,
-    // and hidden while every icon is switched off.
-    visible: root.geom.visible && shortcutsContent.count > 0
+    // Hidden until added from the "+" menu in edit mode, and while every icon is off.
+    // Uses enabledShortcutCount (a root property) instead of shortcutsContent.count
+    // to avoid the forward-reference timing bug.
+    visible: root.geom.visible && root.enabledShortcutCount > 0
 
     DepthMask {
         anchors.fill: parent
@@ -61,6 +67,7 @@ PanelWindow {
             transparentBg: root.geom.transparentBg
             customFont: root.geom.fontFamily || ""
             shortcuts: root.geom.shortcuts
+            vertical: root.geom.vertical
             onTriggered: key => root.trigger(key)
         }
     }

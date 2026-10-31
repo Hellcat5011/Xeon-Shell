@@ -31,7 +31,9 @@ Item {
 
     readonly property var enabledItems: root.allItems.filter(it => !root.shortcuts || root.shortcuts[it.key] !== false)
     readonly property int count: root.enabledItems.length
-    readonly property bool isVertical: root.height > root.width * 1.2
+    // When explicitly set, overrides the shape-based auto-detection
+    property var vertical: undefined
+    readonly property bool isVertical: (typeof root.vertical === "boolean") ? root.vertical : (root.height > root.width * 1.2)
 
     DesktopWidgetBackground {
         transparentBg: root.transparentBg
@@ -53,6 +55,8 @@ Item {
         anchors.margins: 6
         visible: root.count > 0
         columns: root.isVertical ? 1 : Math.max(1, root.count)
+        rows: root.isVertical ? Math.max(1, root.count) : 1
+        flow: root.isVertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
         rowSpacing: 4
         columnSpacing: 4
 
